@@ -8,7 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Folder, FolderOpen, FileText } from "lucide-react";
+import { Plus, Trash2, Folder, FileText, Calendar, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -17,6 +17,28 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+function ReviewBadge({ reviewDate }: { reviewDate: number | null }) {
+  if (!reviewDate) return null;
+  const now = Date.now();
+  const overdue = reviewDate <= now;
+  const soon = reviewDate <= now + 24 * 60 * 60 * 1000;
+  return (
+    <span
+      className={`h-2 w-2 rounded-full shrink-0 ${
+        overdue ? "bg-red-500" : soon ? "bg-yellow-400" : "bg-green-400"
+      }`}
+      title={overdue ? "Review overdue!" : `Review due ${new Date(reviewDate).toLocaleDateString()}`}
+    />
+  );
+}
 
 export function AppSidebar() {
   const {
@@ -30,10 +52,16 @@ export function AppSidebar() {
     deleteSession,
     setActiveSession,
     setActiveSubject,
+    markForReview,
+    clearReview,
   } = useStore();
 
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
+
+  const reviewDueCount = sessions.filter(
+    (s) => s.reviewDate !== null && s.reviewDate !== undefined && s.reviewDate <= Date.now()
+  ).length;
 
   const handleCreateSubject = () => {
     if (newSubjectName.trim()) {
@@ -51,8 +79,15 @@ export function AppSidebar() {
   return (
     <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
       <div className="p-4 border-b flex items-center justify-between">
-        <h2 className="font-bold text-lg text-primary tracking-tight">Notesy</h2>
-        <Button variant="ghost" size="icon" onClick={() => setIsAddSubjectOpen(true)}>
+        <div className="flex items-center gap-2">
+          <h2 className="font-bold text-lg text-primary tracking-tight">Notesy</h2>
+          {reviewDueCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+              {reviewDueCount}
+            </span>
+          )}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => setIsAddSubjectOpen(true)} data-testid="button-add-subject">
           <Plus className="h-5 w-5" />
         </Button>
       </div>
@@ -60,7 +95,7 @@ export function AppSidebar() {
       <ScrollArea className="flex-1">
         {subjects.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground italic">
-            No subjects yet.<br/>Create one to get started.
+            No subjects yet.<br />Create one to get started.
           </div>
         ) : (
           <Accordion
@@ -74,28 +109,26 @@ export function AppSidebar() {
                 <AccordionItem value={subject.id} key={subject.id} className="border-b-0">
                   <div className="group flex items-center justify-between px-4 py-2 hover:bg-sidebar-accent cursor-pointer transition-colors">
                     <AccordionTrigger className="hover:no-underline py-0 flex-1 justify-start gap-2">
-                      <Folder className="h-4 w-4 text-primary" />
+                      <Folder className="h-4 w-4 text-primary shrink-0" />
                       <span className="font-medium text-sm truncate">{subject.name}</span>
                     </AccordionTrigger>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="ghost" size="icon"
                         className="h-6 w-6 text-muted-foreground hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("Delete subject and all its sessions?")) {
-                            deleteSubject(subject.id);
-                          }
+                          if (confirm("Delete subject and all its sessions?")) deleteSubject(subject.id);
                         }}
+                        data-testid={`button-delete-subject-${subject.id}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="ghost" size="icon"
                         className="h-6 w-6 text-primary"
                         onClick={(e) => handleCreateSession(subject.id, e)}
+                        data-testid={`button-new-session-${subject.id}`}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -114,30 +147,66 @@ export function AppSidebar() {
                                 ? "bg-primary text-primary-foreground font-medium"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
                             }`}
-                            onClick={() => {
-                              setActiveSubject(subject.id);
-                              setActiveSession(session.id);
-                            }}
+                            onClick={() => { setActiveSubject(subject.id); setActiveSession(session.id); }}
+                            data-testid={`session-item-${session.id}`}
                           >
-                            <div className="flex items-center gap-2 truncate pr-2">
+                            <div className="flex items-center gap-2 truncate pr-1 min-w-0">
                               <FileText className="h-3.5 w-3.5 shrink-0" />
                               <span className="truncate">{session.title}</span>
+                              <ReviewBadge reviewDate={session.reviewDate ?? null} />
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity ${
-                                activeSessionId === session.id ? "text-primary-foreground/80 hover:text-white" : "text-muted-foreground hover:text-destructive"
-                              }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm("Delete session?")) {
-                                  deleteSession(session.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+
+                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity">
+                              {/* Review dropdown */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost" size="icon"
+                                    className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/80 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    data-testid={`button-review-${session.id}`}
+                                    title="Mark for review"
+                                  >
+                                    <Calendar className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent side="right" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 1)}>
+                                    Review in 1 day
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 3)}>
+                                    Review in 3 days
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 7)}>
+                                    Review in 7 days
+                                  </DropdownMenuItem>
+                                  {session.reviewDate && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => clearReview(session.id)}
+                                      >
+                                        <X className="h-3 w-3 mr-1" /> Clear reminder
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+
+                              {/* Delete */}
+                              <Button
+                                variant="ghost" size="icon"
+                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/80 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Delete session?")) deleteSession(session.id);
+                                }}
+                                data-testid={`button-delete-session-${session.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         ))
                       )}
@@ -159,9 +228,8 @@ export function AppSidebar() {
             placeholder="e.g. Biology 101"
             value={newSubjectName}
             onChange={(e) => setNewSubjectName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreateSubject();
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") handleCreateSubject(); }}
+            autoFocus
           />
           <DialogFooter>
             <Button onClick={handleCreateSubject}>Create</Button>

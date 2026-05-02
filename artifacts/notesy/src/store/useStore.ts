@@ -21,6 +21,8 @@ export type Session = {
   title: string;
   createdAt: number;
   participants: Participant[];
+  reviewDate: number | null;
+  reviewInterval: number;
 };
 
 export type Message = {
@@ -50,14 +52,13 @@ type AppState = {
   answerMode: 'exam' | 'short' | 'explanation' | 'normal';
   youtubeMode: boolean;
   currentUser: AppUser | null;
-  
-  // Actions
+
   setApiKey: (key: string) => void;
   setColorMode: (mode: 'black' | 'purple' | 'blue' | 'green') => void;
   setFontMode: (mode: 'normal' | 'caveat' | 'patrick' | 'satisfy') => void;
   setAnswerMode: (mode: 'exam' | 'short' | 'explanation' | 'normal') => void;
   setYoutubeMode: (mode: boolean) => void;
-  
+
   createSubject: (name: string) => void;
   deleteSubject: (id: string) => void;
   createSession: (subjectId: string, title?: string) => string;
@@ -65,10 +66,12 @@ type AppState = {
   setActiveSession: (id: string | null) => void;
   setActiveSubject: (id: string | null) => void;
   updateSessionTitle: (id: string, title: string) => void;
-  
+  markForReview: (id: string, days: number) => void;
+  clearReview: (id: string) => void;
+
   addMessage: (sessionId: string, role: 'user' | 'model', content: string) => void;
   deleteMessageFromId: (sessionId: string, messageId: string) => void;
-  
+
   login: (user: AppUser) => void;
   logout: () => void;
   joinSession: (sessionId: string) => void;
@@ -96,11 +99,7 @@ export const useStore = create<AppState>()(
       setYoutubeMode: (mode) => set({ youtubeMode: mode }),
 
       createSubject: (name) => {
-        const newSubject: Subject = {
-          id: uuidv4(),
-          name,
-          createdAt: Date.now(),
-        };
+        const newSubject: Subject = { id: uuidv4(), name, createdAt: Date.now() };
         set((state) => ({ subjects: [...state.subjects, newSubject] }));
       },
       deleteSubject: (id) => {
@@ -111,30 +110,28 @@ export const useStore = create<AppState>()(
             (m) => !state.sessions.find((s) => s.subjectId === id && s.id === m.sessionId)
           ),
           activeSubjectId: state.activeSubjectId === id ? null : state.activeSubjectId,
-          activeSessionId: state.activeSessionId && state.sessions.find((s) => s.id === state.activeSessionId)?.subjectId === id ? null : state.activeSessionId,
+          activeSessionId:
+            state.activeSessionId &&
+            state.sessions.find((s) => s.id === state.activeSessionId)?.subjectId === id
+              ? null
+              : state.activeSessionId,
         }));
       },
       createSession: (subjectId, title = 'New Session') => {
         const currentUser = get().currentUser;
-        const participant: Participant = currentUser ? {
-          name: currentUser.name,
-          email: currentUser.email,
-          initials: currentUser.name.substring(0, 2).toUpperCase(),
-          color: 'bg-blue-500',
-        } : { name: 'You', email: '', initials: 'YO', color: 'bg-primary' };
-
+        const participant: Participant = currentUser
+          ? { name: currentUser.name, email: currentUser.email, initials: currentUser.name.substring(0, 2).toUpperCase(), color: 'bg-blue-500' }
+          : { name: 'You', email: '', initials: 'YO', color: 'bg-primary' };
         const newSession: Session = {
           id: uuidv4(),
           subjectId,
           title,
           createdAt: Date.now(),
           participants: [participant],
+          reviewDate: null,
+          reviewInterval: 1,
         };
-        set((state) => ({
-          sessions: [...state.sessions, newSession],
-          activeSessionId: newSession.id,
-          activeSubjectId: subjectId,
-        }));
+        set((state) => ({ sessions: [...state.sessions, newSession], activeSessionId: newSession.id, activeSubjectId: subjectId }));
         return newSession.id;
       },
       deleteSession: (id) => {
@@ -147,34 +144,34 @@ export const useStore = create<AppState>()(
       setActiveSession: (id) => set({ activeSessionId: id }),
       setActiveSubject: (id) => set({ activeSubjectId: id }),
       updateSessionTitle: (id, title) => {
+        set((state) => ({ sessions: state.sessions.map((s) => (s.id === id ? { ...s, title } : s)) }));
+      },
+      markForReview: (id, days) => {
+        const reviewDate = Date.now() + days * 24 * 60 * 60 * 1000;
         set((state) => ({
-          sessions: state.sessions.map((s) => (s.id === id ? { ...s, title } : s)),
+          sessions: state.sessions.map((s) => s.id === id ? { ...s, reviewDate, reviewInterval: days } : s),
+        }));
+      },
+      clearReview: (id) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) => s.id === id ? { ...s, reviewDate: null } : s),
         }));
       },
 
       addMessage: (sessionId, role, content) => {
-        const newMessage: Message = {
-          id: uuidv4(),
-          sessionId,
-          role,
-          content,
-          createdAt: Date.now(),
-        };
+        const newMessage: Message = { id: uuidv4(), sessionId, role, content, createdAt: Date.now() };
         set((state) => ({ messages: [...state.messages, newMessage] }));
       },
       deleteMessageFromId: (sessionId, messageId) => {
         set((state) => {
-          const sessionMessages = state.messages.filter(m => m.sessionId === sessionId).sort((a, b) => a.createdAt - b.createdAt);
-          const targetIndex = sessionMessages.findIndex(m => m.id === messageId);
+          const sessionMessages = state.messages.filter((m) => m.sessionId === sessionId).sort((a, b) => a.createdAt - b.createdAt);
+          const targetIndex = sessionMessages.findIndex((m) => m.id === messageId);
           if (targetIndex === -1) return state;
-          
-          const messagesToDelete = new Set(sessionMessages.slice(targetIndex).map(m => m.id));
-          return {
-            messages: state.messages.filter(m => !messagesToDelete.has(m.id))
-          };
+          const messagesToDelete = new Set(sessionMessages.slice(targetIndex).map((m) => m.id));
+          return { messages: state.messages.filter((m) => !messagesToDelete.has(m.id)) };
         });
       },
-      
+
       login: (user) => set({ currentUser: user }),
       logout: () => set({ currentUser: null }),
       joinSession: (sessionId) => {
@@ -182,15 +179,10 @@ export const useStore = create<AppState>()(
           if (!state.currentUser) return state;
           const user = state.currentUser;
           if (user.joinedSessions.includes(sessionId)) return state;
-          
-          return {
-            currentUser: { ...user, joinedSessions: [...user.joinedSessions, sessionId] }
-          };
+          return { currentUser: { ...user, joinedSessions: [...user.joinedSessions, sessionId] } };
         });
-      }
+      },
     }),
-    {
-      name: 'notesy-storage',
-    }
+    { name: 'notesy-storage' }
   )
 );

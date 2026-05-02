@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { ApiKeyModal } from "@/components/ApiKeyModal";
+import { PomodoroTimer } from "@/components/PomodoroTimer";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { useCreateInvite } from "@workspace/api-client-react";
@@ -31,8 +32,8 @@ export default function MainPage() {
           sessionId: activeSession.id,
           sessionTitle: activeSession.title,
           subjectName: activeSubject.name,
-          messages: messages.filter(m => m.sessionId === activeSession.id).map(m => ({ role: m.role, content: m.content }))
-        }
+          messages: messages.filter((m) => m.sessionId === activeSession.id).map((m) => ({ role: m.role, content: m.content })),
+        },
       });
       setInviteLink(window.location.origin + "/join/" + res.token);
       setInviteOpen(true);
@@ -55,30 +56,30 @@ export default function MainPage() {
     black: "bg-gray-900",
     purple: "bg-purple-600",
     blue: "bg-blue-600",
-    green: "bg-green-600"
+    green: "bg-green-600",
   };
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-background">
       <ApiKeyModal />
+
       {/* Top Header */}
       <header className="h-14 border-b flex items-center justify-between px-4 bg-card shrink-0 z-10">
         <div className="flex items-center gap-4">
           <div className="font-bold text-xl tracking-tight text-primary">Notesy</div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {activeSession && (
-            <Button variant="outline" size="sm" className="rounded-full h-9 px-4 font-medium" onClick={handleInvite}>
+            <Button variant="outline" size="sm" className="rounded-full h-9 px-4 font-medium" onClick={handleInvite} data-testid="button-invite">
               <Share2 className="w-4 h-4 mr-2" /> Invite
             </Button>
           )}
-          
           <div className="h-9 flex items-center bg-muted rounded-full p-1 border">
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background" onClick={cycleColor} title="Cycle Color">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background" onClick={cycleColor} title="Cycle heading color" data-testid="button-color-cycle">
               <div className={`w-4 h-4 rounded-full ${colorDotMap[colorMode]} shadow-inner`} />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background" onClick={cycleFont} title="Cycle Font">
+            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-background" onClick={cycleFont} title="Cycle font" data-testid="button-font-cycle">
               <Type className="w-4 h-4 text-foreground" />
             </Button>
           </div>
@@ -91,6 +92,9 @@ export default function MainPage() {
         </div>
         <ChatArea />
       </div>
+
+      {/* Pomodoro Timer (floating) */}
+      <PomodoroTimer />
 
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
