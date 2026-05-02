@@ -4,7 +4,7 @@ import { SendChatMessageBody, GenerateSessionTitleBody } from "@workspace/api-zo
 
 const router = Router();
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 const ANSWER_MODE_INSTRUCTIONS: Record<string, string> = {
   exam: `You are Notesy, created by Aritra Mahatma. Answer in exam-ready format: use structured headings, bold key terms, and end with a "Key Points" summary. Be comprehensive but organized.`,
