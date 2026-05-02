@@ -18,8 +18,8 @@ export function ApiKeyModal() {
 
   const handleSave = () => {
     const trimmed = value.trim();
-    if (!trimmed.startsWith("AIza") || trimmed.length < 30) {
-      setError("Key should start with 'AIza' and be at least 30 characters. Get one from Google AI Studio.");
+    if (trimmed.length < 20) {
+      setError("Key looks too short. Paste the full key from Groq.");
       return;
     }
     setApiKey(trimmed);
@@ -29,7 +29,6 @@ export function ApiKeyModal() {
 
   return (
     <>
-      {/* Change key button always visible in corner */}
       {apiKey && (
         <button
           onClick={() => { setValue(""); setError(""); setOpen(true); }}
@@ -43,36 +42,33 @@ export function ApiKeyModal() {
       <Dialog open={open} onOpenChange={(o) => { if (apiKey) setOpen(o); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Gemini API Key</DialogTitle>
-            <DialogDescription>
-              Notesy uses Google Gemini AI. Paste your key below — it's saved only in your browser.{" "}
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="underline font-medium text-primary"
-              >
-                Get a free key from Google AI Studio →
-              </a>
+            <DialogTitle>Enter your Groq API Key</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>
+                  Notesy uses <strong>Groq + Llama 3.3 70B</strong> — a powerful open-source model, completely free.
+                </p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Go to <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="underline text-primary font-medium">console.groq.com/keys</a></li>
+                  <li>Sign up free (no credit card needed)</li>
+                  <li>Click <strong>Create API Key</strong>, copy it</li>
+                  <li>Paste it below</li>
+                </ol>
+              </div>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
             <Input
-              data-testid="input-gemini-api-key"
+              data-testid="input-groq-api-key"
               type="password"
-              placeholder="AIza..."
+              placeholder="gsk_..."
               value={value}
               onChange={(e) => { setValue(e.target.value); setError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
               autoFocus
             />
-            {error && (
-              <p className="text-xs text-destructive">{error}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Make sure you copy the key from <strong>aistudio.google.com</strong> (not Google Cloud Console). AI Studio keys work on the free tier.
-            </p>
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
 
           <div className="flex justify-end gap-2">
@@ -82,7 +78,7 @@ export function ApiKeyModal() {
             <Button
               data-testid="button-save-api-key"
               onClick={handleSave}
-              disabled={value.trim().length < 10}
+              disabled={value.trim().length < 20}
             >
               Save Key
             </Button>
