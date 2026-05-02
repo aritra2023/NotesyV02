@@ -52,7 +52,7 @@ export function ChatArea() {
   const generateTitleMutation = useGenerateSessionTitle();
 
   const handleSend = async () => {
-    if (!input.trim() || !activeSessionId || !apiKey) return;
+    if (!input.trim() || !activeSessionId) return;
 
     const content = input.trim();
     setInput("");
@@ -73,7 +73,7 @@ export function ChatArea() {
       
       const res = await sendChatMutation.mutateAsync({
         data: {
-          apiKey,
+          apiKey: apiKey || "",
           messages: allMsgs,
           answerMode
         }

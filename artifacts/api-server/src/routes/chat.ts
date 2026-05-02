@@ -20,7 +20,8 @@ router.post("/chat", async (req, res) => {
     return;
   }
 
-  const { apiKey, messages, answerMode } = parsed.data;
+  const { messages, answerMode } = parsed.data;
+  const apiKey = process.env.GEMINI_API_KEY || parsed.data.apiKey;
 
   const systemInstruction = ANSWER_MODE_INSTRUCTIONS[answerMode] || ANSWER_MODE_INSTRUCTIONS.normal;
 
@@ -82,7 +83,8 @@ router.post("/generate-title", async (req, res) => {
     return;
   }
 
-  const { apiKey, firstMessage } = parsed.data;
+  const { firstMessage } = parsed.data;
+  const apiKey = process.env.GEMINI_API_KEY || parsed.data.apiKey;
 
   try {
     const response = await fetch(`${GEMINI_BASE}?key=${apiKey}`, {
