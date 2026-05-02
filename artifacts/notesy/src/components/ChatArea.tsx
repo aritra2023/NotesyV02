@@ -90,8 +90,12 @@ export function ChatArea() {
         });
         updateSessionTitle(activeSessionId, titleRes.title);
       }
-    } catch (err) {
-      toast.error("Failed to send message. Check API key.");
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        (err as { message?: string })?.message ||
+        "Failed to get a response. Check your API key.";
+      toast.error(msg, { duration: 6000 });
     } finally {
       setIsTyping(false);
     }

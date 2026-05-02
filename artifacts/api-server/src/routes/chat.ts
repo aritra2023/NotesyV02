@@ -48,6 +48,7 @@ router.post("/chat", async (req, res) => {
     if (!response.ok) {
       const errData = await response.json().catch(() => ({})) as Record<string, unknown>;
       const errMsg = (errData as { error?: { message?: string } })?.error?.message || `Gemini API error: ${response.status}`;
+      req.log.error({ status: response.status, geminiError: errData }, "Gemini returned non-OK status");
       res.status(400).json({ error: errMsg });
       return;
     }

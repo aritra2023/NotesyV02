@@ -1,0 +1,138 @@
+Notesy
+Tagline: Ask. Learn. Dominate.
+Type: Mobile-first AI study web app
+
+🎯 Core Changes (IMPORTANT)
+❌ Remove:
+PDF Upload
+Image Upload
+RAG system
+✅ Use:
+Free / Open-source APIs only
+Primary model: Google Gemini API
+✅ API Key:
+App user se Gemini API key input karwayega
+Store locally (localStorage)
+✅ Deployment:
+Fully optimized for Vercel (serverless)
+🧩 AI System (UPDATED)
+Model Handling
+Default:
+Gemini (user-provided API key)
+Optional fallback (free/open-source):
+OpenRouter (free models)
+HuggingFace Inference API
+API Flow
+First launch:
+Modal open → “Enter your Gemini API Key”
+Save:
+localStorage
+Every request:
+Use Gemini API via fetch
+If key missing:
+Block chat + show input modal
+🖥️ UI Layout (UNCHANGED - KEEP SAME)
+
+(Sidebar + Chat layout same as original)
+
+💬 Chat Features (UPDATED)
+Keep:
+Markdown rendering
+Typing indicator
+Edit & resend
+Copy / delete
+Answer modes
+Remove:
+❌ File upload button
+❌ PDF parsing logic
+❌ Image OCR
+📄 Export PDF (OPTIONAL SIMPLE VERSION)
+Keep only:
+Chat → HTML → browser print
+❌ No pdf-parse
+❌ No document processing
+🔐 Auth System (SIMPLIFIED)
+❌ Remove PostgreSQL (Vercel pe heavy ho jayega)
+✅ Use:
+localStorage आधारित sessions
+Optional:
+Vercel KV / Supabase (later upgrade)
+🔗 Invite System (KEEP BUT LIGHT)
+Use:
+Simple token in URL
+Store:
+session data in localStorage (or optional DB later)
+⚙️ Tech Stack (VERCEL OPTIMIZED)
+Frontend
+React + Vite
+Tailwind CSS
+Zustand
+Backend (IMPORTANT CHANGE)
+❌ Express server remove
+✅ Use:
+Vercel Serverless Functions (/api/chat)
+🔌 Example API Route (VERY IMPORTANT)
+// /api/chat.js (Vercel serverless)
+
+export default async function handler(req, res) {
+  const { message, apiKey } = req.body;
+
+  if (!apiKey) {
+    return res.status(400).json({ error: "Missing API key" });
+  }
+
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: message }] }],
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  res.status(200).json({
+    reply: data?.candidates?.[0]?.content?.parts?.[0]?.text || "No response",
+  });
+}
+🎨 UI Additions (NEW)
+🔑 API Key Modal
+Input field:
+"Enter Gemini API Key"
+Save button
+Validate (min length check)
+Store in localStorage
+⚡ Performance Optimizations
+Use streaming response (optional later)
+Debounce input
+Cache last messages in Zustand
+Lazy load components
+🧠 AI Behavior (UPDATED)
+Identity:
+“Notesy, created by Aritra Mahatma”
+No dependency on OpenAI
+Fully Gemini-based
+🚀 FINAL RESULT
+
+Ye app:
+
+✅ 100% Vercel deployable
+✅ Free APIs pe chalega
+✅ No backend server needed
+✅ No heavy DB needed
+✅ Simple + fast + scalable
+💥 Straight Talk (Important)
+
+Tera original prompt:
+❌ Over-engineered tha (PDF + RAG + DB + Express)
+👉 Vercel pe directly run nahi hota
+
+Ab wala version:
+✅ Lean hai
+✅ Deployable hai
+✅ Real usable hai

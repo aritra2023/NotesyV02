@@ -31,7 +31,16 @@ export function ApiKeyModal() {
           <DialogTitle>Welcome to Notesy</DialogTitle>
           <DialogDescription>
             To start studying with AI, please enter your Gemini API key.
-            This key is stored locally in your browser.
+            This key is stored locally in your browser.{" "}
+            <a
+              href="https://aistudio.google.com/app/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-primary"
+            >
+              Get a free key here
+            </a>
+            .
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
