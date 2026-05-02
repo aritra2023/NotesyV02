@@ -14,3 +14,92 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Send a message to Gemini AI
+ */
+export const SendChatMessageBody = zod.object({
+  apiKey: zod.string().describe("User's Gemini API key"),
+  messages: zod.array(
+    zod.object({
+      role: zod.enum(["user", "model"]),
+      content: zod.string(),
+    }),
+  ),
+  answerMode: zod
+    .enum(["exam", "short", "explanation", "normal"])
+    .describe("Answer mode for AI response style"),
+  systemInstruction: zod
+    .string()
+    .optional()
+    .describe("Optional system instruction override"),
+});
+
+export const SendChatMessageResponse = zod.object({
+  reply: zod.string(),
+  usage: zod
+    .object({
+      promptTokens: zod.number().optional(),
+      completionTokens: zod.number().optional(),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Generate a session title from first message
+ */
+export const GenerateSessionTitleBody = zod.object({
+  apiKey: zod.string(),
+  firstMessage: zod.string(),
+});
+
+export const GenerateSessionTitleResponse = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Create an invite link for a session
+ */
+export const CreateInviteBody = zod.object({
+  subjectName: zod.string(),
+  sessionTitle: zod.string(),
+  sessionId: zod.string(),
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "model"]),
+        content: zod.string(),
+      }),
+    )
+    .optional(),
+  createdBy: zod.string().optional(),
+});
+
+export const CreateInviteResponse = zod.object({
+  token: zod.string(),
+  url: zod.string(),
+});
+
+/**
+ * @summary Get invite info by token
+ */
+export const GetInviteParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const GetInviteResponse = zod.object({
+  token: zod.string(),
+  subjectName: zod.string(),
+  sessionTitle: zod.string(),
+  sessionId: zod.string(),
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "model"]),
+        content: zod.string(),
+      }),
+    )
+    .optional(),
+  createdBy: zod.string().optional(),
+  createdAt: zod.string(),
+});

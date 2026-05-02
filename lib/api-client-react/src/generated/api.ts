@@ -5,18 +5,31 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ChatRequest,
+  ChatResponse,
+  CreateInviteRequest,
+  ErrorResponse,
+  GenerateTitleRequest,
+  GenerateTitleResponse,
+  HealthStatus,
+  InviteInfo,
+  InviteResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +105,349 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Send a message to Gemini AI
+ */
+export const getSendChatMessageUrl = () => {
+  return `/api/chat`;
+};
+
+export const sendChatMessage = async (
+  chatRequest: ChatRequest,
+  options?: RequestInit,
+): Promise<ChatResponse> => {
+  return customFetch<ChatResponse>(getSendChatMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatRequest),
+  });
+};
+
+export const getSendChatMessageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    TError,
+    { data: BodyType<ChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendChatMessage>>,
+  TError,
+  { data: BodyType<ChatRequest> },
+  TContext
+> => {
+  const mutationKey = ["sendChatMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    { data: BodyType<ChatRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendChatMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendChatMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendChatMessage>>
+>;
+export type SendChatMessageMutationBody = BodyType<ChatRequest>;
+export type SendChatMessageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Send a message to Gemini AI
+ */
+export const useSendChatMessage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    TError,
+    { data: BodyType<ChatRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendChatMessage>>,
+  TError,
+  { data: BodyType<ChatRequest> },
+  TContext
+> => {
+  return useMutation(getSendChatMessageMutationOptions(options));
+};
+
+/**
+ * @summary Generate a session title from first message
+ */
+export const getGenerateSessionTitleUrl = () => {
+  return `/api/generate-title`;
+};
+
+export const generateSessionTitle = async (
+  generateTitleRequest: GenerateTitleRequest,
+  options?: RequestInit,
+): Promise<GenerateTitleResponse> => {
+  return customFetch<GenerateTitleResponse>(getGenerateSessionTitleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateTitleRequest),
+  });
+};
+
+export const getGenerateSessionTitleMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSessionTitle>>,
+    TError,
+    { data: BodyType<GenerateTitleRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateSessionTitle>>,
+  TError,
+  { data: BodyType<GenerateTitleRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateSessionTitle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateSessionTitle>>,
+    { data: BodyType<GenerateTitleRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateSessionTitle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateSessionTitleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateSessionTitle>>
+>;
+export type GenerateSessionTitleMutationBody = BodyType<GenerateTitleRequest>;
+export type GenerateSessionTitleMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a session title from first message
+ */
+export const useGenerateSessionTitle = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSessionTitle>>,
+    TError,
+    { data: BodyType<GenerateTitleRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateSessionTitle>>,
+  TError,
+  { data: BodyType<GenerateTitleRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateSessionTitleMutationOptions(options));
+};
+
+/**
+ * @summary Create an invite link for a session
+ */
+export const getCreateInviteUrl = () => {
+  return `/api/invite`;
+};
+
+export const createInvite = async (
+  createInviteRequest: CreateInviteRequest,
+  options?: RequestInit,
+): Promise<InviteResponse> => {
+  return customFetch<InviteResponse>(getCreateInviteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createInviteRequest),
+  });
+};
+
+export const getCreateInviteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvite>>,
+    TError,
+    { data: BodyType<CreateInviteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInvite>>,
+  TError,
+  { data: BodyType<CreateInviteRequest> },
+  TContext
+> => {
+  const mutationKey = ["createInvite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInvite>>,
+    { data: BodyType<CreateInviteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createInvite(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInviteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInvite>>
+>;
+export type CreateInviteMutationBody = BodyType<CreateInviteRequest>;
+export type CreateInviteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create an invite link for a session
+ */
+export const useCreateInvite = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInvite>>,
+    TError,
+    { data: BodyType<CreateInviteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInvite>>,
+  TError,
+  { data: BodyType<CreateInviteRequest> },
+  TContext
+> => {
+  return useMutation(getCreateInviteMutationOptions(options));
+};
+
+/**
+ * @summary Get invite info by token
+ */
+export const getGetInviteUrl = (token: string) => {
+  return `/api/invite/${token}`;
+};
+
+export const getInvite = async (
+  token: string,
+  options?: RequestInit,
+): Promise<InviteInfo> => {
+  return customFetch<InviteInfo>(getGetInviteUrl(token), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInviteQueryKey = (token: string) => {
+  return [`/api/invite/${token}`] as const;
+};
+
+export const getGetInviteQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInvite>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvite>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInviteQueryKey(token);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvite>>> = ({
+    signal,
+  }) => getInvite(token, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!token,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getInvite>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetInviteQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInvite>>
+>;
+export type GetInviteQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get invite info by token
+ */
+
+export function useGetInvite<
+  TData = Awaited<ReturnType<typeof getInvite>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  token: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getInvite>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetInviteQueryOptions(token, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

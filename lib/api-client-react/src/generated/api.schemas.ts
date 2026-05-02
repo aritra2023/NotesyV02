@@ -8,3 +8,85 @@
 export interface HealthStatus {
   status: string;
 }
+
+/**
+ * Answer mode for AI response style
+ */
+export type ChatRequestAnswerMode =
+  (typeof ChatRequestAnswerMode)[keyof typeof ChatRequestAnswerMode];
+
+export const ChatRequestAnswerMode = {
+  exam: "exam",
+  short: "short",
+  explanation: "explanation",
+  normal: "normal",
+} as const;
+
+export type ChatMessageRole =
+  (typeof ChatMessageRole)[keyof typeof ChatMessageRole];
+
+export const ChatMessageRole = {
+  user: "user",
+  model: "model",
+} as const;
+
+export interface ChatMessage {
+  role: ChatMessageRole;
+  content: string;
+}
+
+export interface ChatRequest {
+  /** User's Gemini API key */
+  apiKey: string;
+  messages: ChatMessage[];
+  /** Answer mode for AI response style */
+  answerMode: ChatRequestAnswerMode;
+  /** Optional system instruction override */
+  systemInstruction?: string;
+}
+
+export type ChatResponseUsage = {
+  promptTokens?: number;
+  completionTokens?: number;
+};
+
+export interface ChatResponse {
+  reply: string;
+  usage?: ChatResponseUsage;
+}
+
+export interface GenerateTitleRequest {
+  apiKey: string;
+  firstMessage: string;
+}
+
+export interface GenerateTitleResponse {
+  title: string;
+}
+
+export interface CreateInviteRequest {
+  subjectName: string;
+  sessionTitle: string;
+  sessionId: string;
+  messages?: ChatMessage[];
+  createdBy?: string;
+}
+
+export interface InviteResponse {
+  token: string;
+  url: string;
+}
+
+export interface InviteInfo {
+  token: string;
+  subjectName: string;
+  sessionTitle: string;
+  sessionId: string;
+  messages?: ChatMessage[];
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface ErrorResponse {
+  error: string;
+}

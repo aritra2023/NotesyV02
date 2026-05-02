@@ -1,0 +1,118 @@
+Notesy — Complete App Prompt
+App Name: Notesy
+Tagline: Ask. Learn. Dominate.
+Type: Mobile-first AI study web app
+
+Overview
+Notesy ek ultra-minimal AI-powered study assistant hai jahan students apne subjects organize kar ke AI se padhai kar sakte hain. Koi distraction nahi, sirf padhai.
+
+UI Layout
+Desktop (side-by-side):
+
+Left: Fixed 256px wide sidebar with subjects & sessions
+Right: Full-height chat panel
+Mobile:
+
+Header mein hamburger menu button → sidebar ek slide-out drawer mein khulta hai
+Chat panel full width leta hai
+Header (top bar):
+
+Left: "Notesy" bold title + hamburger (mobile only)
+Right: 3 pill-shaped toggle buttons —
+Invite — share session ka link generate karta hai
+Color dot — AI response text ka heading color cycle karta hai (Black → Purple → Blue → Green)
+Aa button — AI response ka font style cycle karta hai (Normal → Caveat handwriting → Patrick Hand → Satisfy)
+Sidebar Features
+Subjects list — accordion style, folder icon ke saath
+"+" button — dialog box khulta hai subject create karne ke liye
+Subject hover — trash icon appear hota hai delete ke liye (confirmation dialog)
+Sessions list — subject expand hone par dikhai deta hai, left border line ke saath indented
+"New Session" button — naya session create karta hai under a subject
+Session hover — trash icon dikhta hai delete ke liye
+Active session — highlight hota hai sidebar mein
+Empty state — "No subjects yet. Create one to get started."
+Chat Area Features
+Session Header:
+
+Subject name (small caps, muted) + Session title (bold)
+Right side: Participants avatars (initials circles, max 5 + overflow count)
+"Export PDF" button (sirf tab dikhta hai jab messages hon)
+Messages:
+
+User messages: Right-aligned, primary color bubble
+AI messages: Left-aligned, secondary color bubble, full Markdown rendering (headings, bold, bullet points, code blocks, tables — remark-gfm)
+Typing indicator: 3 bouncing dots + 3 shimmer skeleton lines — AI ke jawab aane tak dikhta hai
+Smooth scroll: Naya message aane par auto-scroll bottom tak
+Per-message hover actions:
+
+AI messages: YouTube link button (session title se YouTube search opens in new tab)
+All messages: Copy button (checkmark confirm ke saath)
+User messages only: Edit & Resend (message edit karke AI se dobara jawab milta hai — purane messages delete ho jaate hain)
+All messages: Delete from here (is message aur uske baad ke sab delete ho jaate hain)
+Answer Mode Selector (4 modes):
+
+📖 Exam Mode — structured headings, bold terms, "Key Points" summary
+✏️ Short Answer — 2-4 sentences, most important term bold
+💡 Explanation Mode — detailed, analogies, real-world examples, headings
+📄 Normal — default helpful response with markdown
+Active mode badge dikhta hai input ke upar jab non-normal mode selected ho.
+
+YouTube Search Mode:
+
+Toggle button se YouTube mode on hota hai
+Input mein query type karo → Enter → Top 5 YouTube videos dikhta hai with thumbnail, title, channel name, view count
+Direct links new tab mein open hote hain
+File Upload (PDF / Image):
+
+"+" popover button → file picker open hota hai
+Upload states: reading → uploading → done with animated badge
+PDF: pdf-parse se text extract hota hai
+Image: OpenAI Vision (gpt-5.2) se OCR hoti hai
+Large document RAG: 500-800 word chunks mein split hota hai, 100-word overlap ke saath → relevant chunks keyword scoring se retrieve hoke AI ko context milta hai
+Attached file badge dikhta hai "×" button ke saath clear karne ke liye
+Export PDF:
+
+Poori chat ka styled HTML generate hota hai
+AI responses Markdown se HTML mein convert hote hain
+Color mode ke hisaab se headings/bold ka color change hota hai
+Browser print dialog automatically open hota hai
+Color Mode (heading color of AI responses)
+Black (default)
+Purple (hsl 252)
+Blue (hsl 213)
+Green (hsl 142)
+Handwriting Mode (AI response font)
+Normal (default system font)
+Caveat (casual handwriting)
+Patrick Hand (clean handwriting)
+Satisfy (cursive)
+Session Sharing / Invite System
+From the app:
+
+"Invite" button → Share Dialog khulta hai
+Token-based unique link generate hota hai: yourdomain.com/join/abc123def456
+Link copy karo aur dosto ko bhejo
+Join page (/join/:token):
+
+Session info dikhta hai (subject name + session title)
+Register tab: Name + Email + Password
+Login tab: Email + Password
+Submit karne par seedha us session mein land karte hain
+Returning users ke purane joined sessions restore hote hain
+Auth System
+Custom email/password auth (bcryptjs hashing)
+PostgreSQL mein app_users table
+Session sharing ke through sirf join karte waqt register/login hota hai — koi separate login page nahi main app mein
+User data localStorage mein save hota hai
+AI Behavior
+Identity: Notesy, created by Aritra Mahatma — agar koi puchhe "who made you" to hamesha yahi answer
+Model: gpt-5.2 via Replit AI Integrations (no personal API key needed)
+Session auto-naming: Pehle message ke baad AI 4-6 word ka title generate karta hai session ke liye
+Full conversation history: Poori chat history context ke roop mein AI ko jaati hai
+Tech Stack (internal)
+Frontend: React 19 + Vite + Tailwind CSS v4 + Radix UI + Framer Motion
+Backend: Express 5 + Node.js 24
+Database: PostgreSQL + Drizzle ORM
+AI: OpenAI gpt-5.2 via Replit AI Integrations
+PDF: pdf-parse library
+State: Zustand

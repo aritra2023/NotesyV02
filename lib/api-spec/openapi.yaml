@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: chat
+    description: AI chat operations
+  - name: invite
+    description: Session invite operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,95 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /chat:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message to Gemini AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /generate-title:
+    post:
+      operationId: generateSessionTitle
+      tags: [chat]
+      summary: Generate a session title from first message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateTitleRequest"
+      responses:
+        "200":
+          description: Generated title
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateTitleResponse"
+
+  /invite:
+    post:
+      operationId: createInvite
+      tags: [invite]
+      summary: Create an invite link for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInviteRequest"
+      responses:
+        "200":
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteResponse"
+
+  /invite/{token}:
+    get:
+      operationId: getInvite
+      tags: [invite]
+      summary: Get invite info by token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteInfo"
+        "404":
+          description: Invite not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +127,135 @@ components:
       required:
         - status
 
+    ChatRequest:
+      type: object
+      properties:
+        apiKey:
+          type: string
+          description: User's Gemini API key
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        answerMode:
+          type: string
+          enum: [exam, short, explanation, normal]
+          description: Answer mode for AI response style
+        systemInstruction:
+          type: string
+          description: Optional system instruction override
+      required:
+        - apiKey
+        - messages
+        - answerMode
+
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, model]
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        usage:
+          type: object
+          properties:
+            promptTokens:
+              type: integer
+            completionTokens:
+              type: integer
+      required:
+        - reply
+
+    GenerateTitleRequest:
+      type: object
+      properties:
+        apiKey:
+          type: string
+        firstMessage:
+          type: string
+      required:
+        - apiKey
+        - firstMessage
+
+    GenerateTitleResponse:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    CreateInviteRequest:
+      type: object
+      properties:
+        subjectName:
+          type: string
+        sessionTitle:
+          type: string
+        sessionId:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        createdBy:
+          type: string
+      required:
+        - subjectName
+        - sessionTitle
+        - sessionId
+
+    InviteResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        url:
+          type: string
+      required:
+        - token
+        - url
+
+    InviteInfo:
+      type: object
+      properties:
+        token:
+          type: string
+        subjectName:
+          type: string
+        sessionTitle:
+          type: string
+        sessionId:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - token
+        - subjectName
+        - sessionTitle
+        - sessionId
+        - createdAt
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
