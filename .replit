@@ -38,3 +38,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 GEMINI_API_KEY = "AIzaSyD6oeLa7J6U0naF-uP2BuaZyNdnQtymav4"
+GROQ_API_KEY = "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"

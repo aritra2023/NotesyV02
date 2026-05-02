@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 
 export function ApiKeyModal() {
   const { apiKey, setApiKey } = useStore();
-  const [open, setOpen] = useState(!apiKey);
+  const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
 
@@ -29,24 +29,23 @@ export function ApiKeyModal() {
 
   return (
     <>
-      {apiKey && (
-        <button
-          onClick={() => { setValue(""); setError(""); setOpen(true); }}
-          className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground hover:text-foreground underline"
-          data-testid="button-change-api-key"
-        >
-          Change API key
-        </button>
-      )}
+      <button
+        onClick={() => { setValue(apiKey || ""); setError(""); setOpen(true); }}
+        className="fixed bottom-4 right-4 z-50 text-xs text-muted-foreground hover:text-foreground underline"
+        data-testid="button-change-api-key"
+      >
+        {apiKey ? "Change API key" : "Add own API key"}
+      </button>
 
-      <Dialog open={open} onOpenChange={(o) => { if (apiKey) setOpen(o); }}>
+      <Dialog open={open} onOpenChange={(o) => setOpen(o)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Enter your Groq API Key</DialogTitle>
+            <DialogTitle>Groq API Key (Optional)</DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>
-                  Notesy uses <strong>Groq + Llama 3.3 70B</strong> — a powerful open-source model, completely free.
+                  Notesy works out of the box — no key needed. Optionally add your own{" "}
+                  <strong>Groq API key</strong> for higher rate limits.
                 </p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Go to <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="underline text-primary font-medium">console.groq.com/keys</a></li>
@@ -62,7 +61,7 @@ export function ApiKeyModal() {
             <Input
               data-testid="input-groq-api-key"
               type="password"
-              placeholder="gsk_..."
+              placeholder="gsk_... (leave blank to use shared key)"
               value={value}
               onChange={(e) => { setValue(e.target.value); setError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
@@ -72,13 +71,16 @@ export function ApiKeyModal() {
           </div>
 
           <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
             {apiKey && (
-              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setApiKey(""); setOpen(false); }}>
+                Clear key
+              </Button>
             )}
             <Button
               data-testid="button-save-api-key"
               onClick={handleSave}
-              disabled={value.trim().length < 20}
+              disabled={value.trim().length > 0 && value.trim().length < 20}
             >
               Save Key
             </Button>
