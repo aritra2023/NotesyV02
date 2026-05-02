@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
+import { ApiKeyModal } from "@/components/ApiKeyModal";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { useCreateInvite } from "@workspace/api-client-react";
@@ -59,6 +60,7 @@ export default function MainPage() {
 
   return (
     <div className="h-screen w-full flex flex-col overflow-hidden bg-background">
+      <ApiKeyModal />
       {/* Top Header */}
       <header className="h-14 border-b flex items-center justify-between px-4 bg-card shrink-0 z-10">
         <div className="flex items-center gap-4">

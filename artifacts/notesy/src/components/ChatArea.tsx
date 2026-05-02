@@ -52,7 +52,7 @@ export function ChatArea() {
   const generateTitleMutation = useGenerateSessionTitle();
 
   const handleSend = async () => {
-    if (!input.trim() || !activeSessionId) return;
+    if (!input.trim() || !activeSessionId || !apiKey) return;
 
     const content = input.trim();
     setInput("");
