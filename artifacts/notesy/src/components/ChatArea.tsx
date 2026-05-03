@@ -223,7 +223,11 @@ export function ChatArea() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24" ref={scrollRef}>
+      <div
+        className="flex-1 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24"
+        ref={scrollRef}
+        style={{ maskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)" }}
+      >
         <div className="max-w-3xl mx-auto space-y-4 pb-2">
           {sessionMessages.map((msg) => (
             <div key={msg.id} className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
