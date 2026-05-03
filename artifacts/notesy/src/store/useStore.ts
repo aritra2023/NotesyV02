@@ -23,6 +23,7 @@ export type Session = {
   participants: Participant[];
   reviewDate: number | null;
   reviewInterval: number;
+  isShared?: boolean;
 };
 
 export type Message = {
@@ -69,6 +70,7 @@ type AppState = {
   updateSessionTitle: (id: string, title: string) => void;
   markForReview: (id: string, days: number) => void;
   clearReview: (id: string) => void;
+  markSessionShared: (id: string) => void;
   importSession: (
     subjectName: string,
     sessionId: string,
@@ -76,8 +78,9 @@ type AppState = {
     msgs: Array<{ role: string; content: string }>
   ) => void;
 
-  addMessage: (sessionId: string, role: 'user' | 'model', content: string) => void;
+  addMessage: (sessionId: string, role: 'user' | 'model', content: string, id?: string) => string;
   deleteMessageFromId: (sessionId: string, messageId: string) => void;
+  addRemoteMessages: (sessionId: string, msgs: Array<{ clientId: string | null; role: string; content: string; createdAt: string }>) => void;
 
   login: (user: AppUser) => void;
   logout: () => void;
@@ -133,13 +136,10 @@ export const useStore = create<AppState>()(
           ? { name: currentUser.name, email: currentUser.email, initials: currentUser.name.substring(0, 2).toUpperCase(), color: 'bg-blue-500' }
           : { name: 'You', email: '', initials: 'YO', color: 'bg-primary' };
         const newSession: Session = {
-          id: uuidv4(),
-          subjectId,
-          title,
+          id: uuidv4(), subjectId, title,
           createdAt: Date.now(),
           participants: [participant],
-          reviewDate: null,
-          reviewInterval: 1,
+          reviewDate: null, reviewInterval: 1,
         };
         set((state) => ({ sessions: [...state.sessions, newSession], activeSessionId: newSession.id, activeSubjectId: subjectId }));
         return newSession.id;
@@ -167,6 +167,11 @@ export const useStore = create<AppState>()(
           sessions: state.sessions.map((s) => s.id === id ? { ...s, reviewDate: null } : s),
         }));
       },
+      markSessionShared: (id) => {
+        set((state) => ({
+          sessions: state.sessions.map((s) => s.id === id ? { ...s, isShared: true } : s),
+        }));
+      },
       importSession: (subjectName, sessionId, sessionTitle, msgs) => {
         set((state) => {
           const existing = state.sessions.find((s) => s.id === sessionId);
@@ -182,18 +187,15 @@ export const useStore = create<AppState>()(
           }
 
           const newSession: Session = {
-            id: sessionId,
-            subjectId: subject.id,
-            title: sessionTitle,
+            id: sessionId, subjectId: subject.id, title: sessionTitle,
             createdAt: Date.now(),
             participants: [{ name: 'Invited', email: '', initials: 'IN', color: 'bg-primary' }],
-            reviewDate: null,
-            reviewInterval: 1,
+            reviewDate: null, reviewInterval: 1,
+            isShared: true,
           };
 
           const newMessages: Message[] = msgs.map((m, i) => ({
-            id: uuidv4(),
-            sessionId,
+            id: uuidv4(), sessionId,
             role: m.role === 'model' ? 'model' : 'user',
             content: m.content,
             createdAt: Date.now() + i,
@@ -209,17 +211,50 @@ export const useStore = create<AppState>()(
         });
       },
 
-      addMessage: (sessionId, role, content) => {
-        const newMessage: Message = { id: uuidv4(), sessionId, role, content, createdAt: Date.now() };
+      addMessage: (sessionId, role, content, id) => {
+        const msgId = id ?? uuidv4();
+        const newMessage: Message = { id: msgId, sessionId, role, content, createdAt: Date.now() };
         set((state) => ({ messages: [...state.messages, newMessage] }));
+        return msgId;
       },
       deleteMessageFromId: (sessionId, messageId) => {
         set((state) => {
-          const sessionMessages = state.messages.filter((m) => m.sessionId === sessionId).sort((a, b) => a.createdAt - b.createdAt);
+          const sessionMessages = state.messages
+            .filter((m) => m.sessionId === sessionId)
+            .sort((a, b) => a.createdAt - b.createdAt);
           const targetIndex = sessionMessages.findIndex((m) => m.id === messageId);
           if (targetIndex === -1) return state;
           const messagesToDelete = new Set(sessionMessages.slice(targetIndex).map((m) => m.id));
           return { messages: state.messages.filter((m) => !messagesToDelete.has(m.id)) };
+        });
+      },
+      addRemoteMessages: (sessionId, msgs) => {
+        set((state) => {
+          const existing = state.messages.filter((m) => m.sessionId === sessionId);
+          const existingIds = new Set(existing.map((m) => m.id));
+          const existingClientIds = new Set(existing.map((m) => m.id));
+
+          const toAdd: Message[] = [];
+          for (const msg of msgs) {
+            // Skip if clientId matches a local message id (it's our own message)
+            if (msg.clientId && existingClientIds.has(msg.clientId)) continue;
+            // Skip if content+role already exists in local store (rough dedup)
+            const alreadyExists = existing.some(
+              (m) => m.role === msg.role && m.content === msg.content
+            );
+            if (alreadyExists) continue;
+            const newId = uuidv4();
+            if (existingIds.has(newId)) continue;
+            toAdd.push({
+              id: newId, sessionId,
+              role: msg.role === 'model' ? 'model' : 'user',
+              content: msg.content,
+              createdAt: new Date(msg.createdAt).getTime(),
+            });
+          }
+
+          if (toAdd.length === 0) return state;
+          return { messages: [...state.messages, ...toAdd] };
         });
       },
 

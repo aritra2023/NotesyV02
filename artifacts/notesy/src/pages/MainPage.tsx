@@ -20,6 +20,7 @@ export default function MainPage() {
   const {
     colorMode, setColorMode,
     activeSessionId, sessions, subjects, messages,
+    markSessionShared,
   } = useStore();
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -44,6 +45,8 @@ export default function MainPage() {
             .map((m) => ({ role: m.role, content: m.content })),
         },
       });
+      // Mark this session as shared so both parties sync in real-time
+      markSessionShared(activeSession.id);
       setInviteLink(window.location.origin + "/join/" + res.token);
       setInviteOpen(true);
     } catch (e) {
@@ -63,25 +66,24 @@ export default function MainPage() {
       colorMode === "green" ? "#16a34a" : "#111827";
 
     let html = `<html><head><title>${activeSession.title}</title><style>
-      body { font-family: system-ui; max-width: 800px; margin: 0 auto; padding: 40px; line-height: 1.6; }
-      .message { margin-bottom: 24px; }
-      .user-label { font-weight: bold; color: #4b5563; margin-bottom: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-      .model { background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; }
-      h1 { color: ${headingColor}; border-bottom: 2px solid ${headingColor}; padding-bottom: 8px; }
-      h2, h3, h4 { color: ${headingColor}; }
-      table { border-collapse: collapse; width: 100%; }
-      th, td { border: 1px solid #e5e7eb; padding: 8px 12px; }
-      th { background: #f3f4f6; }
-      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-      pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; }
+      body{font-family:system-ui;max-width:800px;margin:0 auto;padding:40px;line-height:1.6}
+      .user-label{font-weight:bold;color:#4b5563;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+      .model{background:#f9fafb;padding:16px;border-radius:8px;border:1px solid #e5e7eb}
+      h1{color:${headingColor};border-bottom:2px solid ${headingColor};padding-bottom:8px}
+      h2,h3,h4{color:${headingColor}}
+      table{border-collapse:collapse;width:100%}
+      th,td{border:1px solid #e5e7eb;padding:8px 12px}
+      th{background:#f3f4f6}
+      code{background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:.9em}
+      pre{background:#1e1e1e;color:#d4d4d4;padding:16px;border-radius:8px;overflow-x:auto}
     </style></head><body>
     <h1>${activeSubject?.name ?? ""} — ${activeSession.title}</h1>`;
 
     sessionMessages.forEach((m) => {
       if (m.role === "user") {
-        html += `<div class="message"><div class="user-label">You</div><div>${m.content}</div></div>`;
+        html += `<div style="margin-bottom:20px"><div class="user-label">You</div><div>${m.content}</div></div>`;
       } else {
-        html += `<div class="message"><div class="model">${marked.parse(m.content)}</div></div>`;
+        html += `<div style="margin-bottom:20px"><div class="model">${marked.parse(m.content)}</div></div>`;
       }
     });
     html += `</body></html>`;
@@ -106,7 +108,6 @@ export default function MainPage() {
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden bg-background">
       {/* Top Header */}
       <header className="h-14 border-b flex items-center justify-between px-3 md:px-4 bg-card shrink-0 z-10">
-        {/* Left: hamburger (mobile) + logo */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost" size="icon"
@@ -120,17 +121,15 @@ export default function MainPage() {
           <span className="font-bold text-base tracking-tight text-primary">Notesy</span>
         </div>
 
-        {/* Right: invite + controls */}
         <div className="flex items-center gap-2">
           {activeSession && (
             <Button
               variant="outline" size="sm"
               className="rounded-full h-8 px-3 font-medium text-xs"
               onClick={handleInvite}
-              data-testid="button-invite"
             >
               <Share2 className="w-3.5 h-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Invite</span>
+              <span>Invite</span>
             </Button>
           )}
           <div className="h-8 flex items-center bg-muted rounded-full px-1 border gap-0.5">
@@ -157,16 +156,13 @@ export default function MainPage() {
 
       {/* Body */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Desktop sidebar */}
         <div className="hidden md:block shrink-0">
           <AppSidebar />
         </div>
-
-        {/* Chat */}
         <ChatArea />
       </div>
 
-      {/* Mobile sidebar — Sheet drawer */}
+      {/* Mobile sidebar drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="p-0 w-72 flex flex-col" aria-describedby={undefined}>
           <SheetTitle className="sr-only">Subjects & Sessions</SheetTitle>
@@ -176,7 +172,6 @@ export default function MainPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Pomodoro timer */}
       <PomodoroTimer />
 
       {/* Invite dialog */}
@@ -187,7 +182,7 @@ export default function MainPage() {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Share this link — anyone with it can join and see the full chat history.
+              Share this link — anyone with it joins and both of you stay in sync live.
             </p>
             <div className="flex items-center gap-2">
               <Input readOnly value={inviteLink} className="text-xs" />
