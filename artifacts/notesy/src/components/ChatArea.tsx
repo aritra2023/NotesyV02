@@ -3,7 +3,6 @@ import { useStore } from "@/store/useStore";
 import { useSendChatMessage, useGenerateSessionTitle } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -201,27 +200,6 @@ export function ChatArea() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-background relative">
-      {/* Slim session header — subject + live badge + avatars only */}
-      <div className="h-11 border-b flex items-center justify-between px-4 bg-card shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest truncate">
-            {activeSubject?.name}
-          </span>
-          {activeSession.isShared && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full dark:bg-green-950 dark:text-green-400 font-bold shrink-0">
-              Live
-            </span>
-          )}
-        </div>
-        <div className="flex -space-x-1.5 shrink-0">
-          {activeSession.participants.slice(0, 3).map((p, i) => (
-            <Avatar key={i} className={`h-5 w-5 border-2 border-background ${p.color}`}>
-              <AvatarFallback className="text-[8px] text-white">{p.initials}</AvatarFallback>
-            </Avatar>
-          ))}
-        </div>
-      </div>
-
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24"
