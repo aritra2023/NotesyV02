@@ -55,6 +55,7 @@ export function ChatArea() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSyncRef = useRef<string>(new Date(0).toISOString());
   const msgRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const isJumpingRef = useRef(false);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const activeSubject = activeSession ? subjects.find((s) => s.id === activeSession.subjectId) : null;
@@ -66,7 +67,9 @@ export function ChatArea() {
   const generateTitleMutation = useGenerateSessionTitle();
 
   const scrollToBottom = () => {
+    if (isJumpingRef.current) return;
     setTimeout(() => {
+      if (isJumpingRef.current) return;
       if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }, 50);
   };
@@ -210,9 +213,13 @@ export function ChatArea() {
     if (!currentPinned) return;
     const el = msgRefs.current.get(currentPinned.id);
     if (el) {
+      isJumpingRef.current = true;
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       setHighlightedId(currentPinned.id);
-      setTimeout(() => setHighlightedId(null), 1800);
+      setTimeout(() => {
+        setHighlightedId(null);
+        isJumpingRef.current = false;
+      }, 2500);
     }
     if (pinnedMessages.length > 1) {
       setPinnedIndex((i) => (i + 1) % pinnedMessages.length);
