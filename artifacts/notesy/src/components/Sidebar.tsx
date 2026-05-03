@@ -179,7 +179,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                                 />
                               </div>
                             ) : (
-                              <span className="truncate flex-1 min-w-0">{session.title}</span>
+                              <span
+                                className="flex-1 min-w-0 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                title={session.title}
+                              >{session.title}</span>
                             )}
 
                             <ReviewBadge reviewDate={session.reviewDate ?? null} />
