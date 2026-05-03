@@ -88,7 +88,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   return (
     <div className="w-full md:w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
-      <div className="p-4 border-b flex items-center justify-between">
+      <div className="p-4 border-b flex items-center justify-between pr-12 md:pr-4">
         <div className="flex items-center gap-2">
           <NotesyLogo size={26} />
           <h2 className="font-bold text-base text-primary tracking-tight">Notesy</h2>

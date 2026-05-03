@@ -269,15 +269,15 @@ export function ChatArea() {
       </div>
 
       {/* Input */}
-      <div className="p-2 md:p-4 bg-background border-t shrink-0">
+      <div className="p-2 md:p-3 bg-background border-t shrink-0">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-end gap-1.5 bg-card border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
+          <div className="flex items-center gap-1 bg-card border rounded-full px-2 py-1.5 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
 
             {/* + button + inline badge */}
-            <div className="flex items-center gap-1 shrink-0 mb-0.5">
+            <div className="flex items-center gap-1 shrink-0">
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg relative" title="Options">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full relative" title="Options">
                     <Plus className="h-4 w-4" />
                     {(answerMode !== "normal" || youtubeMode) && (
                       <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
@@ -337,8 +337,8 @@ export function ChatArea() {
 
               {/* Active mode badge */}
               {(answerMode !== "normal" || youtubeMode) && (
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
-                  {youtubeMode ? "YouTube" : activeMode?.label}
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
+                  {youtubeMode ? "YT" : activeMode?.label}
                 </span>
               )}
             </div>
@@ -347,12 +347,13 @@ export function ChatArea() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={youtubeMode ? "Search YouTube..." : "Ask Notesy..."}
-              className="min-h-[36px] max-h-28 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-1.5 text-sm flex-1 leading-snug"
+              className="min-h-[28px] max-h-24 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-0 text-sm flex-1 leading-snug self-center"
+              rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             />
 
-            <Button size="icon" className="h-8 w-8 rounded-lg shrink-0 mb-0.5" onClick={handleSend} disabled={!input.trim() || isTyping}>
-              {youtubeMode ? <Search className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+            <Button size="icon" className="h-7 w-7 rounded-full shrink-0" onClick={handleSend} disabled={!input.trim() || isTyping}>
+              {youtubeMode ? <Search className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>

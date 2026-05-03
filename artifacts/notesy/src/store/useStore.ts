@@ -85,6 +85,7 @@ type AppState = {
   login: (user: AppUser) => void;
   logout: () => void;
   joinSession: (sessionId: string) => void;
+  updateUser: (fields: Partial<Pick<AppUser, 'name' | 'email' | 'passwordHash'>>) => void;
 };
 
 export const useStore = create<AppState>()(
@@ -260,6 +261,10 @@ export const useStore = create<AppState>()(
 
       login: (user) => set({ currentUser: user }),
       logout: () => set({ currentUser: null }),
+      updateUser: (fields) =>
+        set((state) =>
+          state.currentUser ? { currentUser: { ...state.currentUser, ...fields } } : state
+        ),
       joinSession: (sessionId) => {
         set((state) => {
           if (!state.currentUser) return state;

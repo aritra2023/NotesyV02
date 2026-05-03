@@ -5,7 +5,7 @@ import { NotesyLogo } from "@/components/NotesyLogo";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { useCreateInvite } from "@workspace/api-client-react";
-import { Share2, Settings, Menu, FileDown, Palette, User } from "lucide-react";
+import { Share2, Settings, Menu, FileDown, Palette, User, Lock, Eye, EyeOff, Check } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { marked } from "marked";
+import { toast } from "sonner";
 
 const COLOR_OPTIONS: { value: "black" | "purple" | "blue" | "green"; label: string; dot: string }[] = [
   { value: "black", label: "Default", dot: "bg-gray-900" },
@@ -27,13 +28,21 @@ export default function MainPage() {
   const {
     colorMode, setColorMode,
     activeSessionId, sessions, subjects, messages,
-    markSessionShared, currentUser,
+    markSessionShared, currentUser, updateUser,
   } = useStore();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+
   const createInvite = useCreateInvite();
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -102,10 +111,10 @@ export default function MainPage() {
       <header className="h-14 border-b flex items-center justify-between px-3 md:px-4 bg-card shrink-0 z-10">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" strokeWidth={2.8} />
           </Button>
-          <NotesyLogo size={30} />
-          <span className="font-bold text-base tracking-tight text-primary">Notesy</span>
+          <NotesyLogo size={30} className="md:hidden" />
+          <span className="font-bold text-base tracking-tight text-primary md:hidden">Notesy</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -171,7 +180,7 @@ export default function MainPage() {
 
           <div className="space-y-5 py-1">
             {/* Account */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 <User className="h-3.5 w-3.5" /> Account
               </div>
@@ -179,10 +188,89 @@ export default function MainPage() {
                 <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
                   {initials}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm truncate">{currentUser?.name ?? "Guest"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{currentUser?.email ?? "No account — data saved locally"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{currentUser?.email ?? "Data saved locally"}</p>
                 </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => {
+                  setEditName(currentUser?.name ?? "");
+                  setEditEmail(currentUser?.email ?? "");
+                  setEditingProfile(!editingProfile);
+                }}>
+                  <Check className={`h-3.5 w-3.5 transition-opacity ${editingProfile ? "opacity-100 text-primary" : "opacity-0"}`} />
+                  {!editingProfile && <User className="h-3.5 w-3.5 absolute" />}
+                </Button>
+              </div>
+
+              {editingProfile && (
+                <div className="space-y-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground font-medium">Display Name</label>
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Your name"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground font-medium">Email</label>
+                    <Input
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      type="email"
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <Button size="sm" className="w-full h-8 text-xs" onClick={() => {
+                    if (editName.trim()) {
+                      updateUser({ name: editName.trim(), email: editEmail.trim() });
+                      setEditingProfile(false);
+                      toast.success("Profile updated");
+                    }
+                  }}>
+                    Save Profile
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Change Password */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <Lock className="h-3.5 w-3.5" /> Change Password
+              </div>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    type={showPw ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password"
+                    className="h-8 text-sm pr-8"
+                  />
+                  <button className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPw(!showPw)}>
+                    {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="h-8 text-sm"
+                />
+                <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={() => {
+                  if (!newPassword) return;
+                  if (newPassword !== confirmPassword) { toast.error("Passwords don't match"); return; }
+                  if (newPassword.length < 6) { toast.error("Password too short (min 6 chars)"); return; }
+                  updateUser({ passwordHash: newPassword });
+                  setNewPassword(""); setConfirmPassword("");
+                  toast.success("Password updated");
+                }}>
+                  Update Password
+                </Button>
               </div>
             </div>
 
