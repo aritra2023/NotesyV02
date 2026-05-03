@@ -147,7 +147,7 @@ export default function MainPage() {
               onClick={toggleDarkMode}
               title={darkMode ? "Light mode" : "Dark mode"}
             >
-              {darkMode ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-foreground" />}
+              {darkMode ? <Sun className="w-3.5 h-3.5 text-foreground" /> : <Moon className="w-3.5 h-3.5 text-foreground" />}
             </Button>
             {/* Color dot (keeps quick cycling) */}
             <Button
