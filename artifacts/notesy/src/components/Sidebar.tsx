@@ -87,17 +87,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   return (
     <div className="w-full md:w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
-      <div className="p-4 border-b flex items-center justify-between pr-12 md:pr-4">
-        <div className="flex items-center gap-2">
-          {reviewDueCount > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
-              {reviewDueCount}
-            </span>
-          )}
-        </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsAddSubjectOpen(true)} data-testid="button-add-subject">
-          <Plus className="h-5 w-5" />
-        </Button>
+      <div className="px-4 py-3 border-b flex items-center gap-2 pr-12 md:pr-4">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex-1">Subjects</span>
+        {reviewDueCount > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+            {reviewDueCount}
+          </span>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
@@ -243,6 +239,19 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </Accordion>
         )}
       </ScrollArea>
+
+      {/* Footer — Add Subject */}
+      <div className="p-3 border-t shrink-0">
+        <Button
+          variant="outline"
+          className="w-full h-9 text-sm gap-2 rounded-lg"
+          onClick={() => setIsAddSubjectOpen(true)}
+          data-testid="button-add-subject"
+        >
+          <Plus className="h-4 w-4" />
+          New Subject
+        </Button>
+      </div>
 
       <Dialog open={isAddSubjectOpen} onOpenChange={setIsAddSubjectOpen}>
         <DialogContent className="sm:max-w-sm">
