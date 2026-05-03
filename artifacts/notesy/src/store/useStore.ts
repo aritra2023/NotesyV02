@@ -232,26 +232,24 @@ export const useStore = create<AppState>()(
       addRemoteMessages: (sessionId, msgs) => {
         set((state) => {
           const existing = state.messages.filter((m) => m.sessionId === sessionId);
-          const existingIds = new Set(existing.map((m) => m.id));
-          const existingClientIds = new Set(existing.map((m) => m.id));
+          // existingLocalIds: set of local message IDs (used as clientId when posting to sync)
+          const existingLocalIds = new Set(existing.map((m) => m.id));
 
           const toAdd: Message[] = [];
           for (const msg of msgs) {
-            // Skip if clientId matches a local message id (it's our own message)
-            if (msg.clientId && existingClientIds.has(msg.clientId)) continue;
-            // Skip if content+role already exists in local store (rough dedup)
-            const alreadyExists = existing.some(
-              (m) => m.role === msg.role && m.content === msg.content
-            );
-            if (alreadyExists) continue;
-            const newId = uuidv4();
-            if (existingIds.has(newId)) continue;
+            // Skip if this remote message's clientId matches one of our own local message IDs
+            // (meaning WE sent this message — don't duplicate it)
+            if (msg.clientId && existingLocalIds.has(msg.clientId)) continue;
+            // Skip if we already imported this exact DB record (by synced DB id stored as clientId in our local msg)
+            // This handles re-polls of already-added remote messages
+            if (existingLocalIds.has(msg.id)) continue;
             toAdd.push({
-              id: newId, sessionId,
+              id: msg.id, sessionId,
               role: msg.role === 'model' ? 'model' : 'user',
               content: msg.content,
               createdAt: new Date(msg.createdAt).getTime(),
             });
+            existingLocalIds.add(msg.id);
           }
 
           if (toAdd.length === 0) return state;

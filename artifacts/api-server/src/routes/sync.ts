@@ -40,6 +40,10 @@ router.get("/sync/messages/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   const sinceRaw = req.query.since as string | undefined;
 
+  // Prevent browser/CDN caching so polling always gets fresh data
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+
   try {
     let rows;
     if (sinceRaw) {

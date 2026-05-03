@@ -63,6 +63,17 @@ export default function MainPage() {
         },
       });
       markSessionShared(activeSession.id);
+
+      // Bulk-sync existing messages to DB so receiver can poll them
+      const base = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      for (const m of sessionMessages) {
+        fetch(`${base}/api/sync/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: activeSession.id, role: m.role, content: m.content, clientId: m.id }),
+        }).catch(() => {});
+      }
+
       setInviteLink(window.location.origin + "/join/" + res.token);
       setInviteOpen(true);
     } catch (e) {

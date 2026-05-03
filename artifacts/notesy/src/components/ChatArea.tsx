@@ -71,7 +71,7 @@ export function ChatArea() {
     if (!activeSessionId || !activeSession?.isShared) return;
     try {
       const since = lastSyncRef.current;
-      const r = await fetch(`${BASE}/api/sync/messages/${activeSessionId}?since=${encodeURIComponent(since)}`);
+      const r = await fetch(`${BASE}/api/sync/messages/${activeSessionId}?since=${encodeURIComponent(since)}`, { cache: "no-store" });
       if (!r.ok) return;
       const data = await r.json() as { messages: Array<{ id: string; clientId: string | null; role: string; content: string; createdAt: string }> };
       if (data.messages.length > 0) {
