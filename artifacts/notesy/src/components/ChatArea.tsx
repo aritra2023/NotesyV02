@@ -219,13 +219,16 @@ export function ChatArea() {
     }
   };
 
-  return (
-    <div className="flex-1 flex flex-col min-h-0 bg-background relative">
+  const pinBannerHeight = currentPinned ? 52 : 0;
 
-      {/* Telegram-style pin banner */}
+  return (
+    <div className="flex-1 flex flex-col min-h-0 bg-background relative overflow-hidden">
+
+      {/* Telegram-style pin banner — absolute so it never shifts scroll area */}
       {currentPinned && (
         <div
-          className="flex items-center gap-2.5 px-4 py-2 bg-card border-b cursor-pointer hover:bg-muted/40 transition-colors shrink-0 group/pin"
+          className="absolute top-0 left-0 right-0 z-10 flex items-center gap-2.5 px-4 py-2 bg-card/95 backdrop-blur-sm border-b cursor-pointer hover:bg-muted/60 transition-colors group/pin"
+          style={{ height: pinBannerHeight }}
           onClick={jumpToPinned}
         >
           <div className="w-0.5 self-stretch rounded-full bg-primary shrink-0" />
@@ -248,11 +251,15 @@ export function ChatArea() {
         </div>
       )}
 
-      {/* Messages */}
+      {/* Messages — inset fills full area, top padding accounts for pin banner */}
       <div
-        className="flex-1 min-h-0 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24"
+        className="absolute inset-0 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24"
         ref={scrollRef}
-        style={{ maskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)" }}
+        style={{
+          paddingTop: `${pinBannerHeight + 12}px`,
+          maskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)"
+        }}
       >
         <div className="max-w-3xl mx-auto space-y-4 pb-2">
 
