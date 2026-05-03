@@ -69,6 +69,12 @@ type AppState = {
   updateSessionTitle: (id: string, title: string) => void;
   markForReview: (id: string, days: number) => void;
   clearReview: (id: string) => void;
+  importSession: (
+    subjectName: string,
+    sessionId: string,
+    sessionTitle: string,
+    msgs: Array<{ role: string; content: string }>
+  ) => void;
 
   addMessage: (sessionId: string, role: 'user' | 'model', content: string) => void;
   deleteMessageFromId: (sessionId: string, messageId: string) => void;
@@ -160,6 +166,47 @@ export const useStore = create<AppState>()(
         set((state) => ({
           sessions: state.sessions.map((s) => s.id === id ? { ...s, reviewDate: null } : s),
         }));
+      },
+      importSession: (subjectName, sessionId, sessionTitle, msgs) => {
+        set((state) => {
+          const existing = state.sessions.find((s) => s.id === sessionId);
+          if (existing) {
+            return { activeSessionId: sessionId, activeSubjectId: existing.subjectId };
+          }
+
+          let subject = state.subjects.find((s) => s.name === subjectName);
+          let newSubjects = state.subjects;
+          if (!subject) {
+            subject = { id: uuidv4(), name: subjectName, createdAt: Date.now() };
+            newSubjects = [...state.subjects, subject];
+          }
+
+          const newSession: Session = {
+            id: sessionId,
+            subjectId: subject.id,
+            title: sessionTitle,
+            createdAt: Date.now(),
+            participants: [{ name: 'Invited', email: '', initials: 'IN', color: 'bg-primary' }],
+            reviewDate: null,
+            reviewInterval: 1,
+          };
+
+          const newMessages: Message[] = msgs.map((m, i) => ({
+            id: uuidv4(),
+            sessionId,
+            role: m.role === 'model' ? 'model' : 'user',
+            content: m.content,
+            createdAt: Date.now() + i,
+          }));
+
+          return {
+            subjects: newSubjects,
+            sessions: [...state.sessions, newSession],
+            messages: [...state.messages, ...newMessages],
+            activeSessionId: sessionId,
+            activeSubjectId: subject.id,
+          };
+        });
       },
 
       addMessage: (sessionId, role, content) => {

@@ -2,14 +2,11 @@ import { useState, useRef } from "react";
 import { useStore } from "@/store/useStore";
 import { useSendChatMessage, useGenerateSessionTitle } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   Copy, Edit2, Trash2, Youtube, Send, BookOpen,
@@ -18,7 +15,6 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { marked } from "marked";
 import { toast } from "sonner";
 import { AiActionModal } from "@/components/AiActionModal";
 
@@ -76,7 +72,7 @@ export function ChatArea() {
         const r = await fetch(`/api/youtube-search?q=${encodeURIComponent(content)}`);
         const data = await r.json() as { videos?: YoutubeVideo[]; error?: string };
         if (data.videos && data.videos.length > 0) {
-          const md = `## 🎬 Top ${data.videos.length} YouTube Results for "${content}"\n\n` +
+          const md = `## 🎬 Top ${data.videos.length} Results for "${content}"\n\n` +
             data.videos.map((v, i) =>
               `**${i + 1}. [${v.title}](${v.url})**  \n${[v.channel, v.views, v.duration].filter(Boolean).join(" • ")}`
             ).join("\n\n");
@@ -91,6 +87,14 @@ export function ChatArea() {
         scrollToBottom();
       }
       return;
+    }
+
+    const isFirstMessage = sessionMessages.length === 0;
+
+    // Immediately name session from first message
+    if (isFirstMessage) {
+      const quickTitle = content.trim().split(/\s+/).slice(0, 6).join(" ");
+      updateSessionTitle(activeSessionId, quickTitle);
     }
 
     addMessage(activeSessionId, "user", content);
@@ -110,11 +114,13 @@ export function ChatArea() {
       addMessage(activeSessionId, "model", res.reply);
       scrollToBottom();
 
-      if (sessionMessages.length === 0) {
-        const titleRes = await generateTitleMutation.mutateAsync({
+      // Refine title with AI after first message
+      if (isFirstMessage) {
+        generateTitleMutation.mutateAsync({
           data: { apiKey, firstMessage: content },
-        });
-        updateSessionTitle(activeSessionId, titleRes.title);
+        }).then((titleRes) => {
+          updateSessionTitle(activeSessionId, titleRes.title);
+        }).catch(() => {});
       }
     } catch (err: unknown) {
       const msg =
@@ -133,32 +139,8 @@ export function ChatArea() {
     toast.success("Copied!");
   };
 
-  const handleExportPDF = () => {
-    if (!activeSession || sessionMessages.length === 0) return;
-    const headingColor =
-      colorMode === "purple" ? "#9333ea" : colorMode === "blue" ? "#2563eb" :
-      colorMode === "green" ? "#16a34a" : "#111827";
-    let html = `<html><head><title>${activeSession.title}</title><style>
-      body { font-family: system-ui; max-width: 800px; margin: 0 auto; padding: 40px; }
-      .message { margin-bottom: 24px; } .user { font-weight: bold; color: #4b5563; margin-bottom: 8px; }
-      .model { background: #f9fafb; padding: 16px; border-radius: 8px; }
-      h1, h2, h3, h4 { color: ${headingColor}; }
-      table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #e5e7eb; padding: 8px; }
-      code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
-    </style></head><body><h1>${activeSubject?.name} — ${activeSession.title}</h1><hr/>`;
-    sessionMessages.forEach((m) => {
-      if (m.role === "user") html += `<div class="message"><div class="user">You:</div><div>${m.content}</div></div>`;
-      else html += `<div class="message"><div class="model">${marked.parse(m.content)}</div></div>`;
-    });
-    html += `</body></html>`;
-    const win = window.open("", "", "width=800,height=600");
-    if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 500); }
-  };
-
   const saveTitle = () => {
-    if (activeSessionId && titleDraft.trim()) {
-      updateSessionTitle(activeSessionId, titleDraft.trim());
-    }
+    if (activeSessionId && titleDraft.trim()) updateSessionTitle(activeSessionId, titleDraft.trim());
     setEditingTitle(false);
   };
 
@@ -174,57 +156,61 @@ export function ChatArea() {
     );
   }
 
-  const fontClass = { normal: "font-sans", caveat: "font-caveat text-xl", patrick: "font-patrick text-xl", satisfy: "font-satisfy text-xl" }[fontMode];
-  const colorClass = { black: "prose-headings:text-gray-900", purple: "prose-headings:text-purple-600", blue: "prose-headings:text-blue-600", green: "prose-headings:text-green-600" }[colorMode];
+  const fontClass = {
+    normal: "font-sans", caveat: "font-caveat text-xl",
+    patrick: "font-patrick text-xl", satisfy: "font-satisfy text-xl",
+  }[fontMode];
+
+  const colorClass = {
+    black: "prose-headings:text-gray-900", purple: "prose-headings:text-purple-600",
+    blue: "prose-headings:text-blue-600", green: "prose-headings:text-green-600",
+  }[colorMode];
+
   const activeMode = MODE_OPTIONS.find((m) => m.mode === answerMode);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative">
-      {/* Header */}
-      <div className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0">
-        <div className="min-w-0">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
+      {/* Session Header */}
+      <div className="h-14 border-b flex items-center justify-between px-5 bg-card shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5">
             {activeSubject?.name}
           </div>
           {editingTitle ? (
             <Input
-              autoFocus
-              value={titleDraft}
+              autoFocus value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={saveTitle}
               onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-              className="h-7 font-bold text-base px-1 py-0 border-0 border-b rounded-none focus-visible:ring-0 shadow-none w-64"
+              className="h-6 font-bold text-sm px-1 py-0 border-0 border-b rounded-none focus-visible:ring-0 shadow-none w-56"
             />
           ) : (
             <div
-              className="group flex items-center gap-1.5 cursor-pointer"
+              className="group flex items-center gap-1 cursor-pointer w-fit"
               onClick={() => { setTitleDraft(activeSession.title); setEditingTitle(true); }}
               title="Click to rename"
             >
-              <span className="font-bold text-lg leading-none truncate max-w-xs">{activeSession.title}</span>
+              <span className="font-bold text-base leading-none truncate max-w-xs">{activeSession.title}</span>
               <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex -space-x-2">
-            {activeSession.participants.slice(0, 4).map((p, i) => (
-              <Avatar key={i} className={`h-7 w-7 border-2 border-background ${p.color}`}>
-                <AvatarFallback className="text-xs text-white">{p.initials}</AvatarFallback>
+        <div className="flex items-center gap-1.5 shrink-0 ml-3">
+          <div className="flex -space-x-1.5">
+            {activeSession.participants.slice(0, 3).map((p, i) => (
+              <Avatar key={i} className={`h-6 w-6 border-2 border-background ${p.color}`}>
+                <AvatarFallback className="text-[9px] text-white">{p.initials}</AvatarFallback>
               </Avatar>
             ))}
           </div>
           {sessionMessages.length > 0 && (
             <>
-              <Button variant="outline" size="sm" onClick={() => setAiModal("summary")} data-testid="button-summary">
-                <FileSearch className="h-3.5 w-3.5 mr-1.5" /> Summary
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setAiModal("summary")}>
+                <FileSearch className="h-3.5 w-3.5 mr-1" /> Summary
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setAiModal("cheatsheet")} data-testid="button-cheatsheet">
-                <BookMarked className="h-3.5 w-3.5 mr-1.5" /> Cheat Sheet
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExportPDF} data-testid="button-export-pdf">
-                Export PDF
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setAiModal("cheatsheet")}>
+                <BookMarked className="h-3.5 w-3.5 mr-1" /> Cheat Sheet
               </Button>
             </>
           )}
@@ -232,44 +218,59 @@ export function ChatArea() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto space-y-6 pb-20">
+      <div className="flex-1 overflow-y-auto p-5" ref={scrollRef}>
+        <div className="max-w-3xl mx-auto space-y-5 pb-20">
           {sessionMessages.map((msg) => (
             <div key={msg.id} className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-              <div className={`relative max-w-[85%] rounded-2xl px-5 py-3.5 ${
+              <div className={`max-w-[82%] rounded-2xl px-4 py-3 ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground rounded-br-sm shadow-sm"
                   : "bg-muted/50 border shadow-sm rounded-bl-sm"
               }`}>
                 {msg.role === "user" ? (
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
                 ) : (
                   <div className={`prose prose-sm dark:prose-invert max-w-none ${fontClass} ${colorClass}`}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
                 )}
-                <div className={`absolute -top-3 ${msg.role === "user" ? "left-0 -translate-x-full pr-2" : "right-0 translate-x-full pl-2"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1`}>
-                  <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => handleCopy(msg.content)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  {msg.role === "user" && (
-                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm text-destructive" onClick={() => deleteMessageFromId(activeSessionId, msg.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+              </div>
+
+              {/* Action buttons — small row below message, on hover */}
+              <div className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                <button
+                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={() => handleCopy(msg.content)}
+                  title="Copy"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+                {msg.role === "user" && (
+                  <button
+                    className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }}
+                    title="Edit"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </button>
+                )}
+                <button
+                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={() => deleteMessageFromId(activeSessionId, msg.id)}
+                  title="Delete"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
               </div>
             </div>
           ))}
+
           {isTyping && (
             <div className="flex flex-col items-start">
-              <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-5 py-4 w-32 shadow-sm flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"></div>
+              <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-5 py-4 w-24 shadow-sm flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" />
               </div>
             </div>
           )}
@@ -280,50 +281,48 @@ export function ChatArea() {
       <div className="p-4 bg-background border-t shrink-0">
         <div className="max-w-3xl mx-auto">
           <div className="relative flex items-end gap-1 bg-card border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
-            {/* + Options Popover */}
             <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost" size="icon"
-                  className="h-9 w-9 rounded-lg shrink-0 mb-1 relative"
+                  className="h-8 w-8 rounded-lg shrink-0 mb-0.5 relative"
                   data-testid="button-options-popover"
                   title="Options"
                 >
-                  <Plus className="h-5 w-5" />
+                  <Plus className="h-4 w-4" />
                   {(answerMode !== "normal" || youtubeMode) && (
-                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
+                    <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-52 p-2">
-                <p className="text-xs font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">Answer Mode</p>
+              <PopoverContent side="top" align="start" className="w-48 p-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">Answer Mode</p>
                 {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
                   <button
                     key={mode}
-                    className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-md text-sm transition-colors ${answerMode === mode ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-foreground"}`}
+                    className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${answerMode === mode ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-foreground"}`}
                     onClick={() => { setAnswerMode(mode); setPopoverOpen(false); }}
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
                     {label}
-                    {answerMode === mode && <Check className="h-3.5 w-3.5 ml-auto" />}
+                    {answerMode === mode && <Check className="h-3 w-3 ml-auto" />}
                   </button>
                 ))}
-                <div className="border-t my-1.5" />
+                <div className="border-t my-1" />
                 <button
-                  className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-md text-sm transition-colors ${youtubeMode ? "bg-red-50 text-red-600 font-medium dark:bg-red-950/30 dark:text-red-400" : "hover:bg-muted text-foreground"}`}
+                  className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${youtubeMode ? "bg-red-50 text-red-600 font-medium dark:bg-red-950/30 dark:text-red-400" : "hover:bg-muted text-foreground"}`}
                   onClick={() => { setYoutubeMode(!youtubeMode); setPopoverOpen(false); }}
                 >
-                  <Youtube className="h-4 w-4 shrink-0" />
+                  <Youtube className="h-3.5 w-3.5 shrink-0" />
                   YouTube Search
-                  {youtubeMode && <Check className="h-3.5 w-3.5 ml-auto" />}
+                  {youtubeMode && <Check className="h-3 w-3 ml-auto" />}
                 </button>
               </PopoverContent>
             </Popover>
 
-            {/* Current mode badge */}
             {(answerMode !== "normal" || youtubeMode) && (
-              <div className="mb-1 self-end">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
+              <div className="mb-0.5 self-end">
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
                   {youtubeMode ? "YouTube" : activeMode?.label}
                 </span>
               </div>
@@ -333,18 +332,18 @@ export function ChatArea() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={youtubeMode ? "Search YouTube for..." : "Ask Notesy..."}
-              className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-2 text-base flex-1"
+              className="min-h-[40px] max-h-32 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-2 text-sm flex-1"
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               data-testid="input-chat"
             />
             <Button
               size="icon"
-              className="h-10 w-10 rounded-lg shrink-0 mb-1"
+              className="h-8 w-8 rounded-lg shrink-0 mb-0.5"
               onClick={handleSend}
               disabled={!input.trim() || isTyping}
               data-testid="button-send"
             >
-              {youtubeMode ? <Search className="h-5 w-5" /> : <Send className="h-5 w-5" />}
+              {youtubeMode ? <Search className="h-4 w-4" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </div>
