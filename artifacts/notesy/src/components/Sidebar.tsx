@@ -180,7 +180,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         subjectSessions.map((session) => (
                           <div
                             key={session.id}
-                            className={`group/item flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors ${
+                            className={`group/item flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors overflow-hidden ${
                               activeSessionId === session.id
                                 ? "bg-primary text-primary-foreground font-medium"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
