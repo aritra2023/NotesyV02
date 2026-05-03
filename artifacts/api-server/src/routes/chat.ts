@@ -51,12 +51,12 @@ async function callAI(
 ): Promise<Response> {
   const openRouterKey = process.env.OPENAI_API_KEY?.trim();
 
-  // If user provided their own key, use OpenRouter with it
+  // If user provided their own key, use Groq with it
   if (overrideKey) {
-    return fetch(OPENROUTER_BASE, {
+    return fetch(GROQ_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${overrideKey}` },
-      body: buildBody(OPENROUTER_MODEL, systemPrompt, messages, maxTokens),
+      body: buildBody(GROQ_MODEL, systemPrompt, messages, maxTokens),
     });
   }
 
