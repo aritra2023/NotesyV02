@@ -5,6 +5,7 @@ const router = Router();
 
 const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_API_KEY = "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";
 
 const ANSWER_MODE_INSTRUCTIONS: Record<string, string> = {
   exam: `You are Notesy, an AI study assistant created by Aritra Mahatma. Answer in exam-ready format: use structured headings (##), bold key terms, bullet points, and end with a "## Key Points" summary section. Be comprehensive but organized.`,
@@ -41,12 +42,7 @@ router.post("/chat", async (req, res) => {
   }
 
   const { messages, answerMode } = parsed.data;
-  const apiKey = parsed.data.apiKey || process.env.GROQ_API_KEY || "";
-
-  if (!apiKey) {
-    res.status(400).json({ error: "No API key provided. Enter your Groq API key." });
-    return;
-  }
+  const apiKey = parsed.data.apiKey || process.env.GROQ_API_KEY || GROQ_API_KEY;
 
   const systemPrompt = ANSWER_MODE_INSTRUCTIONS[answerMode] || ANSWER_MODE_INSTRUCTIONS.normal;
   const groqMessages = messages.map((m) => ({ role: m.role === "model" ? "assistant" : "user", content: m.content }));
@@ -88,12 +84,7 @@ router.post("/generate-title", async (req, res) => {
   }
 
   const { firstMessage } = parsed.data;
-  const apiKey = parsed.data.apiKey || process.env.GROQ_API_KEY || "";
-
-  if (!apiKey) {
-    res.json({ title: "Study Session" });
-    return;
-  }
+  const apiKey = parsed.data.apiKey || process.env.GROQ_API_KEY || GROQ_API_KEY;
 
   try {
     const response = await callGroq(

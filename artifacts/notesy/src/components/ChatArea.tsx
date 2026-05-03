@@ -1,23 +1,20 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useStore } from "@/store/useStore";
 import { useSendChatMessage, useGenerateSessionTitle } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import {
-  Copy,
-  Edit2,
-  Trash2,
-  Youtube,
-  Send,
-  BookOpen,
-  AlignLeft,
-  Lightbulb,
-  FileText,
-  Search,
-  FileSearch,
-  BookMarked,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Copy, Edit2, Trash2, Youtube, Send, BookOpen,
+  AlignLeft, Lightbulb, FileText, Search, FileSearch,
+  BookMarked, Plus, Check, Pencil,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,27 +22,29 @@ import { marked } from "marked";
 import { toast } from "sonner";
 import { AiActionModal } from "@/components/AiActionModal";
 
+interface YoutubeVideo { id: string; title: string; url: string; channel: string; views: string; duration: string; }
+
+const MODE_OPTIONS = [
+  { mode: "normal" as const, label: "Normal", icon: FileText },
+  { mode: "exam" as const, label: "Exam Mode", icon: BookOpen },
+  { mode: "short" as const, label: "Short", icon: AlignLeft },
+  { mode: "explanation" as const, label: "Explain", icon: Lightbulb },
+];
+
 export function ChatArea() {
   const {
-    activeSessionId,
-    sessions,
-    subjects,
-    messages,
-    addMessage,
-    deleteMessageFromId,
-    updateSessionTitle,
-    apiKey,
-    colorMode,
-    fontMode,
-    answerMode,
-    youtubeMode,
-    setAnswerMode,
-    setYoutubeMode,
+    activeSessionId, sessions, subjects, messages,
+    addMessage, deleteMessageFromId, updateSessionTitle,
+    apiKey, colorMode, fontMode, answerMode, youtubeMode,
+    setAnswerMode, setYoutubeMode,
   } = useStore();
 
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [aiModal, setAiModal] = useState<"summary" | "cheatsheet" | null>(null);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -57,40 +56,59 @@ export function ChatArea() {
   const sendChatMutation = useSendChatMessage();
   const generateTitleMutation = useGenerateSessionTitle();
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [sessionMessages.length, isTyping]);
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, 50);
+  };
 
   const handleSend = async () => {
-    if (!input.trim() || !activeSessionId || !apiKey) return;
-
+    if (!input.trim() || !activeSessionId) return;
     const content = input.trim();
     setInput("");
+    scrollToBottom();
 
     if (youtubeMode) {
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(content)}`, "_blank");
-      addMessage(activeSessionId, "model", `*Searching YouTube for:* **${content}**`);
+      addMessage(activeSessionId, "user", `🔍 Search YouTube: ${content}`);
+      setIsTyping(true);
       setYoutubeMode(false);
+      try {
+        const r = await fetch(`/api/youtube-search?q=${encodeURIComponent(content)}`);
+        const data = await r.json() as { videos?: YoutubeVideo[]; error?: string };
+        if (data.videos && data.videos.length > 0) {
+          const md = `## 🎬 Top ${data.videos.length} YouTube Results for "${content}"\n\n` +
+            data.videos.map((v, i) =>
+              `**${i + 1}. [${v.title}](${v.url})**  \n${[v.channel, v.views, v.duration].filter(Boolean).join(" • ")}`
+            ).join("\n\n");
+          addMessage(activeSessionId, "model", md);
+        } else {
+          addMessage(activeSessionId, "model", `No results found. [Search on YouTube directly](https://www.youtube.com/results?search_query=${encodeURIComponent(content)})`);
+        }
+      } catch {
+        addMessage(activeSessionId, "model", `[Search YouTube for "${content}"](https://www.youtube.com/results?search_query=${encodeURIComponent(content)})`);
+      } finally {
+        setIsTyping(false);
+        scrollToBottom();
+      }
       return;
     }
 
     addMessage(activeSessionId, "user", content);
     setIsTyping(true);
+    scrollToBottom();
 
     try {
       const allMsgs = messages
         .filter((m) => m.sessionId === activeSessionId)
         .sort((a, b) => a.createdAt - b.createdAt)
         .map((m) => ({ role: m.role, content: m.content }));
-      allMsgs.push({ role: "user", content });
+      allMsgs.push({ role: "user" as const, content });
 
       const res = await sendChatMutation.mutateAsync({
         data: { apiKey: apiKey || "", messages: allMsgs, answerMode },
       });
-
       addMessage(activeSessionId, "model", res.reply);
+      scrollToBottom();
 
       if (sessionMessages.length === 0) {
         const titleRes = await generateTitleMutation.mutateAsync({
@@ -102,10 +120,11 @@ export function ChatArea() {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
         (err as { message?: string })?.message ||
-        "Failed to get a response. Check your API key.";
+        "Failed to get a response.";
       toast.error(msg, { duration: 6000 });
     } finally {
       setIsTyping(false);
+      scrollToBottom();
     }
   };
 
@@ -117,34 +136,30 @@ export function ChatArea() {
   const handleExportPDF = () => {
     if (!activeSession || sessionMessages.length === 0) return;
     const headingColor =
-      colorMode === "purple" ? "#9333ea" :
-      colorMode === "blue"   ? "#2563eb" :
-      colorMode === "green"  ? "#16a34a" : "#111827";
-
+      colorMode === "purple" ? "#9333ea" : colorMode === "blue" ? "#2563eb" :
+      colorMode === "green" ? "#16a34a" : "#111827";
     let html = `<html><head><title>${activeSession.title}</title><style>
       body { font-family: system-ui; max-width: 800px; margin: 0 auto; padding: 40px; }
-      .message { margin-bottom: 24px; }
-      .user { font-weight: bold; color: #4b5563; margin-bottom: 8px; }
+      .message { margin-bottom: 24px; } .user { font-weight: bold; color: #4b5563; margin-bottom: 8px; }
       .model { background: #f9fafb; padding: 16px; border-radius: 8px; }
       h1, h2, h3, h4 { color: ${headingColor}; }
       table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #e5e7eb; padding: 8px; }
       code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
-    </style></head><body>
-    <h1>${activeSubject?.name} — ${activeSession.title}</h1><hr/>`;
+    </style></head><body><h1>${activeSubject?.name} — ${activeSession.title}</h1><hr/>`;
     sessionMessages.forEach((m) => {
-      if (m.role === "user") {
-        html += `<div class="message"><div class="user">You:</div><div>${m.content}</div></div>`;
-      } else {
-        html += `<div class="message"><div class="model">${marked.parse(m.content)}</div></div>`;
-      }
+      if (m.role === "user") html += `<div class="message"><div class="user">You:</div><div>${m.content}</div></div>`;
+      else html += `<div class="message"><div class="model">${marked.parse(m.content)}</div></div>`;
     });
     html += `</body></html>`;
     const win = window.open("", "", "width=800,height=600");
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      setTimeout(() => win.print(), 500);
+    if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 500); }
+  };
+
+  const saveTitle = () => {
+    if (activeSessionId && titleDraft.trim()) {
+      updateSessionTitle(activeSessionId, titleDraft.trim());
     }
+    setEditingTitle(false);
   };
 
   if (!activeSession) {
@@ -159,42 +174,46 @@ export function ChatArea() {
     );
   }
 
-  const fontClass = {
-    normal: "font-sans",
-    caveat: "font-caveat text-xl",
-    patrick: "font-patrick text-xl",
-    satisfy: "font-satisfy text-xl",
-  }[fontMode];
-
-  const colorClass = {
-    black: "prose-headings:text-gray-900",
-    purple: "prose-headings:text-purple-600",
-    blue: "prose-headings:text-blue-600",
-    green: "prose-headings:text-green-600",
-  }[colorMode];
+  const fontClass = { normal: "font-sans", caveat: "font-caveat text-xl", patrick: "font-patrick text-xl", satisfy: "font-satisfy text-xl" }[fontMode];
+  const colorClass = { black: "prose-headings:text-gray-900", purple: "prose-headings:text-purple-600", blue: "prose-headings:text-blue-600", green: "prose-headings:text-green-600" }[colorMode];
+  const activeMode = MODE_OPTIONS.find((m) => m.mode === answerMode);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background relative">
       {/* Header */}
       <div className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0">
-        <div>
+        <div className="min-w-0">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
             {activeSubject?.name}
           </div>
-          <div className="font-bold text-lg leading-none">{activeSession.title}</div>
+          {editingTitle ? (
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+              className="h-7 font-bold text-base px-1 py-0 border-0 border-b rounded-none focus-visible:ring-0 shadow-none w-64"
+            />
+          ) : (
+            <div
+              className="group flex items-center gap-1.5 cursor-pointer"
+              onClick={() => { setTitleDraft(activeSession.title); setEditingTitle(true); }}
+              title="Click to rename"
+            >
+              <span className="font-bold text-lg leading-none truncate max-w-xs">{activeSession.title}</span>
+              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 shrink-0">
           <div className="flex -space-x-2">
-            {activeSession.participants.slice(0, 5).map((p, i) => (
-              <Avatar key={i} className={`h-8 w-8 border-2 border-background ${p.color}`}>
+            {activeSession.participants.slice(0, 4).map((p, i) => (
+              <Avatar key={i} className={`h-7 w-7 border-2 border-background ${p.color}`}>
                 <AvatarFallback className="text-xs text-white">{p.initials}</AvatarFallback>
               </Avatar>
             ))}
-            {activeSession.participants.length > 5 && (
-              <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs font-medium z-10">
-                +{activeSession.participants.length - 5}
-              </div>
-            )}
           </div>
           {sessionMessages.length > 0 && (
             <>
@@ -229,34 +248,22 @@ export function ChatArea() {
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
                 )}
-
                 <div className={`absolute -top-3 ${msg.role === "user" ? "left-0 -translate-x-full pr-2" : "right-0 translate-x-full pl-2"} opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1`}>
-                  {msg.role === "model" && (
-                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm"
-                      onClick={() => window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(activeSession.title)}`, "_blank")}>
-                      <Youtube className="h-4 w-4" />
-                    </Button>
-                  )}
                   <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => handleCopy(msg.content)}>
                     <Copy className="h-4 w-4" />
                   </Button>
                   {msg.role === "user" && (
-                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => {
-                      setInput(msg.content);
-                      deleteMessageFromId(activeSessionId, msg.id);
-                    }}>
+                    <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm text-destructive"
-                    onClick={() => deleteMessageFromId(activeSessionId, msg.id)}>
+                  <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm text-destructive" onClick={() => deleteMessageFromId(activeSessionId, msg.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
           ))}
-
           {isTyping && (
             <div className="flex flex-col items-start">
               <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-5 py-4 w-32 shadow-sm flex items-center gap-1.5">
@@ -272,37 +279,62 @@ export function ChatArea() {
       {/* Input Area */}
       <div className="p-4 bg-background border-t shrink-0">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <Button variant={answerMode === "normal" ? "secondary" : "ghost"} size="sm" className="rounded-full h-8 text-xs" onClick={() => setAnswerMode("normal")}>
-              <FileText className="w-3.5 h-3.5 mr-1" /> Normal
-            </Button>
-            <Button variant={answerMode === "exam" ? "secondary" : "ghost"} size="sm" className="rounded-full h-8 text-xs" onClick={() => setAnswerMode("exam")}>
-              <BookOpen className="w-3.5 h-3.5 mr-1" /> Exam Mode
-            </Button>
-            <Button variant={answerMode === "short" ? "secondary" : "ghost"} size="sm" className="rounded-full h-8 text-xs" onClick={() => setAnswerMode("short")}>
-              <AlignLeft className="w-3.5 h-3.5 mr-1" /> Short
-            </Button>
-            <Button variant={answerMode === "explanation" ? "secondary" : "ghost"} size="sm" className="rounded-full h-8 text-xs" onClick={() => setAnswerMode("explanation")}>
-              <Lightbulb className="w-3.5 h-3.5 mr-1" /> Explain
-            </Button>
-            <div className="w-px h-4 bg-border mx-1" />
-            <Button variant={youtubeMode ? "default" : "ghost"} size="sm" className="rounded-full h-8 text-xs" onClick={() => setYoutubeMode(!youtubeMode)}>
-              <Youtube className="w-3.5 h-3.5 mr-1" /> YouTube
-            </Button>
-          </div>
+          <div className="relative flex items-end gap-1 bg-card border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
+            {/* + Options Popover */}
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost" size="icon"
+                  className="h-9 w-9 rounded-lg shrink-0 mb-1 relative"
+                  data-testid="button-options-popover"
+                  title="Options"
+                >
+                  <Plus className="h-5 w-5" />
+                  {(answerMode !== "normal" || youtubeMode) && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-52 p-2">
+                <p className="text-xs font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">Answer Mode</p>
+                {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
+                  <button
+                    key={mode}
+                    className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-md text-sm transition-colors ${answerMode === mode ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-foreground"}`}
+                    onClick={() => { setAnswerMode(mode); setPopoverOpen(false); }}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {label}
+                    {answerMode === mode && <Check className="h-3.5 w-3.5 ml-auto" />}
+                  </button>
+                ))}
+                <div className="border-t my-1.5" />
+                <button
+                  className={`flex items-center gap-2.5 w-full px-2 py-2 rounded-md text-sm transition-colors ${youtubeMode ? "bg-red-50 text-red-600 font-medium dark:bg-red-950/30 dark:text-red-400" : "hover:bg-muted text-foreground"}`}
+                  onClick={() => { setYoutubeMode(!youtubeMode); setPopoverOpen(false); }}
+                >
+                  <Youtube className="h-4 w-4 shrink-0" />
+                  YouTube Search
+                  {youtubeMode && <Check className="h-3.5 w-3.5 ml-auto" />}
+                </button>
+              </PopoverContent>
+            </Popover>
 
-          <div className="relative flex items-end gap-2 bg-card border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
+            {/* Current mode badge */}
+            {(answerMode !== "normal" || youtubeMode) && (
+              <div className="mb-1 self-end">
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
+                  {youtubeMode ? "YouTube" : activeMode?.label}
+                </span>
+              </div>
+            )}
+
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={youtubeMode ? "Search YouTube for..." : "Ask Notesy..."}
-              className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-2 text-base"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
+              className="min-h-[44px] max-h-32 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-2 text-base flex-1"
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               data-testid="input-chat"
             />
             <Button
@@ -318,17 +350,8 @@ export function ChatArea() {
         </div>
       </div>
 
-      {/* AI Action Modals */}
-      <AiActionModal
-        open={aiModal === "summary"}
-        onClose={() => setAiModal(null)}
-        type="summary"
-      />
-      <AiActionModal
-        open={aiModal === "cheatsheet"}
-        onClose={() => setAiModal(null)}
-        type="cheatsheet"
-      />
+      <AiActionModal open={aiModal === "summary"} onClose={() => setAiModal(null)} type="summary" />
+      <AiActionModal open={aiModal === "cheatsheet"} onClose={() => setAiModal(null)} type="cheatsheet" />
     </div>
   );
 }

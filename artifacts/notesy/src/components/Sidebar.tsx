@@ -1,28 +1,18 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Folder, FileText, Calendar, X } from "lucide-react";
+import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 function ReviewBadge({ reviewDate }: { reviewDate: number | null }) {
@@ -32,35 +22,49 @@ function ReviewBadge({ reviewDate }: { reviewDate: number | null }) {
   const soon = reviewDate <= now + 24 * 60 * 60 * 1000;
   return (
     <span
-      className={`h-2 w-2 rounded-full shrink-0 ${
-        overdue ? "bg-red-500" : soon ? "bg-yellow-400" : "bg-green-400"
-      }`}
+      className={`h-2 w-2 rounded-full shrink-0 ${overdue ? "bg-red-500" : soon ? "bg-yellow-400" : "bg-green-400"}`}
       title={overdue ? "Review overdue!" : `Review due ${new Date(reviewDate).toLocaleDateString()}`}
+    />
+  );
+}
+
+function InlineEdit({ value, onSave, onCancel }: { value: string; onSave: (v: string) => void; onCancel: () => void }) {
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
+  return (
+    <input
+      ref={ref}
+      className="bg-transparent border-b border-primary outline-none text-sm font-medium w-full pr-1"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { if (draft.trim()) onSave(draft.trim()); else onCancel(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); if (draft.trim()) onSave(draft.trim()); }
+        if (e.key === "Escape") onCancel();
+      }}
+      onClick={(e) => e.stopPropagation()}
     />
   );
 }
 
 export function AppSidebar() {
   const {
-    subjects,
-    sessions,
-    activeSessionId,
-    activeSubjectId,
-    createSubject,
-    deleteSubject,
-    createSession,
-    deleteSession,
-    setActiveSession,
-    setActiveSubject,
-    markForReview,
-    clearReview,
+    subjects, sessions, activeSessionId, activeSubjectId,
+    createSubject, deleteSubject, updateSubjectName,
+    createSession, deleteSession,
+    setActiveSession, setActiveSubject,
+    updateSessionTitle,
+    markForReview, clearReview,
   } = useStore();
 
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
+  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
   const reviewDueCount = sessions.filter(
-    (s) => s.reviewDate !== null && s.reviewDate !== undefined && s.reviewDate <= Date.now()
+    (s) => s.reviewDate != null && s.reviewDate <= Date.now()
   ).length;
 
   const handleCreateSubject = () => {
@@ -69,11 +73,6 @@ export function AppSidebar() {
       setNewSubjectName("");
       setIsAddSubjectOpen(false);
     }
-  };
-
-  const handleCreateSession = (subjectId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    createSession(subjectId);
   };
 
   return (
@@ -98,42 +97,53 @@ export function AppSidebar() {
             No subjects yet.<br />Create one to get started.
           </div>
         ) : (
-          <Accordion
-            type="multiple"
-            defaultValue={activeSubjectId ? [activeSubjectId] : []}
-            className="w-full"
-          >
+          <Accordion type="multiple" defaultValue={activeSubjectId ? [activeSubjectId] : []} className="w-full">
             {subjects.map((subject) => {
               const subjectSessions = sessions.filter((s) => s.subjectId === subject.id);
               return (
                 <AccordionItem value={subject.id} key={subject.id} className="border-b-0">
                   <div className="group flex items-center justify-between px-4 py-2 hover:bg-sidebar-accent cursor-pointer transition-colors">
-                    <AccordionTrigger className="hover:no-underline py-0 flex-1 justify-start gap-2">
+                    <AccordionTrigger className="hover:no-underline py-0 flex-1 justify-start gap-2 min-w-0">
                       <Folder className="h-4 w-4 text-primary shrink-0" />
-                      <span className="font-medium text-sm truncate">{subject.name}</span>
+                      {editingSubjectId === subject.id ? (
+                        <InlineEdit
+                          value={subject.name}
+                          onSave={(name) => { updateSubjectName(subject.id, name); setEditingSubjectId(null); }}
+                          onCancel={() => setEditingSubjectId(null)}
+                        />
+                      ) : (
+                        <span
+                          className="font-medium text-sm truncate"
+                          onDoubleClick={(e) => { e.stopPropagation(); setEditingSubjectId(subject.id); }}
+                          title="Double-click to rename"
+                        >
+                          {subject.name}
+                        </span>
+                      )}
                     </AccordionTrigger>
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
                       <Button
-                        variant="ghost" size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm("Delete subject and all its sessions?")) deleteSubject(subject.id);
-                        }}
-                        data-testid={`button-delete-subject-${subject.id}`}
+                        variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"
+                        onClick={(e) => { e.stopPropagation(); setEditingSubjectId(subject.id); }}
+                        title="Rename"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Pencil className="h-3 w-3" />
                       </Button>
                       <Button
-                        variant="ghost" size="icon"
-                        className="h-6 w-6 text-primary"
-                        onClick={(e) => handleCreateSession(subject.id, e)}
-                        data-testid={`button-new-session-${subject.id}`}
+                        variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete subject and all its sessions?")) deleteSubject(subject.id); }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-6 w-6 text-primary"
+                        onClick={(e) => { e.stopPropagation(); createSession(subject.id); }}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
+
                   <AccordionContent className="pb-0">
                     <div className="pl-6 ml-4 border-l border-sidebar-border py-1 flex flex-col gap-1">
                       {subjectSessions.length === 0 ? (
@@ -148,45 +158,56 @@ export function AppSidebar() {
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
                             }`}
                             onClick={() => { setActiveSubject(subject.id); setActiveSession(session.id); }}
-                            data-testid={`session-item-${session.id}`}
                           >
-                            <div className="flex items-center gap-2 truncate pr-1 min-w-0">
+                            <div className="flex items-center gap-2 truncate pr-1 min-w-0 flex-1">
                               <FileText className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{session.title}</span>
+                              {editingSessionId === session.id ? (
+                                <InlineEdit
+                                  value={session.title}
+                                  onSave={(title) => { updateSessionTitle(session.id, title); setEditingSessionId(null); }}
+                                  onCancel={() => setEditingSessionId(null)}
+                                />
+                              ) : (
+                                <span
+                                  className="truncate"
+                                  onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}
+                                  title="Double-click to rename"
+                                >
+                                  {session.title}
+                                </span>
+                              )}
                               <ReviewBadge reviewDate={session.reviewDate ?? null} />
                             </div>
 
                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity">
-                              {/* Review dropdown */}
+                              <Button
+                                variant="ghost" size="icon"
+                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
+                                onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}
+                                title="Rename"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost" size="icon"
-                                    className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/80 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
+                                    className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
                                     onClick={(e) => e.stopPropagation()}
-                                    data-testid={`button-review-${session.id}`}
-                                    title="Mark for review"
+                                    title="Review reminder"
                                   >
                                     <Calendar className="h-3 w-3" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent side="right" onClick={(e) => e.stopPropagation()}>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 1)}>
-                                    Review in 1 day
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 3)}>
-                                    Review in 3 days
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 7)}>
-                                    Review in 7 days
-                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 1)}>Review in 1 day</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 3)}>Review in 3 days</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => markForReview(session.id, 7)}>Review in 7 days</DropdownMenuItem>
                                   {session.reviewDate && (
                                     <>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() => clearReview(session.id)}
-                                      >
+                                      <DropdownMenuItem className="text-destructive" onClick={() => clearReview(session.id)}>
                                         <X className="h-3 w-3 mr-1" /> Clear reminder
                                       </DropdownMenuItem>
                                     </>
@@ -194,15 +215,10 @@ export function AppSidebar() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
 
-                              {/* Delete */}
                               <Button
                                 variant="ghost" size="icon"
-                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/80 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (confirm("Delete session?")) deleteSession(session.id);
-                                }}
-                                data-testid={`button-delete-session-${session.id}`}
+                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
+                                onClick={(e) => { e.stopPropagation(); if (confirm("Delete session?")) deleteSession(session.id); }}
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -221,9 +237,7 @@ export function AppSidebar() {
 
       <Dialog open={isAddSubjectOpen} onOpenChange={setIsAddSubjectOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Create Subject</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Create Subject</DialogTitle></DialogHeader>
           <Input
             placeholder="e.g. Biology 101"
             value={newSubjectName}

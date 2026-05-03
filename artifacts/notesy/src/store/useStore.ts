@@ -61,6 +61,7 @@ type AppState = {
 
   createSubject: (name: string) => void;
   deleteSubject: (id: string) => void;
+  updateSubjectName: (id: string, name: string) => void;
   createSession: (subjectId: string, title?: string) => string;
   deleteSession: (id: string) => void;
   setActiveSession: (id: string | null) => void;
@@ -116,6 +117,9 @@ export const useStore = create<AppState>()(
               ? null
               : state.activeSessionId,
         }));
+      },
+      updateSubjectName: (id, name) => {
+        set((state) => ({ subjects: state.subjects.map((s) => s.id === id ? { ...s, name } : s) }));
       },
       createSession: (subjectId, title = 'New Session') => {
         const currentUser = get().currentUser;
