@@ -329,7 +329,7 @@ export function ChatArea() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={youtubeMode ? "Search YouTube..." : "Ask Notesy..."}
-              className="min-h-[28px] max-h-24 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent p-0 text-sm flex-1 leading-snug self-center"
+              className="min-h-[28px] max-h-24 resize-none border-0 focus-visible:ring-0 shadow-none bg-transparent px-0 py-[5px] text-sm flex-1 leading-snug self-center"
               rows={1}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             />
