@@ -175,7 +175,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                             }`}
                             onClick={() => handleSelectSession(subject.id, session.id)}
                           >
-                            <div className="flex items-center gap-2 truncate pr-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                               <FileText className="h-3.5 w-3.5 shrink-0" />
                               {editingSessionId === session.id ? (
                                 <InlineEdit
@@ -184,14 +184,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                                   onCancel={() => setEditingSessionId(null)}
                                 />
                               ) : (
-                                <span className="truncate" onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}>
+                                <span className="truncate block min-w-0" onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}>
                                   {session.title}
                                 </span>
                               )}
                               <ReviewBadge reviewDate={session.reviewDate ?? null} />
                             </div>
 
-                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity">
+                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity ml-1">
                               <Button
                                 variant="ghost" size="icon"
                                 className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
