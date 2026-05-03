@@ -3,6 +3,9 @@ import { SendChatMessageBody, GenerateSessionTitleBody } from "@workspace/api-zo
 
 const router = Router();
 
+const OPENROUTER_BASE = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+
 const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
@@ -14,9 +17,14 @@ const GROQ_KEYS = [
 
 let currentKeyIndex = 0;
 
-function getNextKey(): string {
-  currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
-  return GROQ_KEYS[currentKeyIndex];
+async function isRateLimitError(response: Response): Promise<boolean> {
+  if (response.status === 429 || response.status === 503) return true;
+  if (response.status === 400) {
+    const body = await response.clone().json().catch(() => ({})) as { error?: { message?: string } };
+    const msg = (body?.error?.message ?? "").toLowerCase();
+    return msg.includes("rate limit") || msg.includes("token");
+  }
+  return false;
 }
 
 const ANSWER_MODE_INSTRUCTIONS: Record<string, string> = {
@@ -26,71 +34,73 @@ const ANSWER_MODE_INSTRUCTIONS: Record<string, string> = {
   normal: `You are Notesy, an AI study assistant created by Aritra Mahatma. Provide a helpful, well-structured response using markdown formatting (headings, bullet points, code blocks where relevant). Be thorough but concise.`,
 };
 
-async function callGroqWithRotation(
+function buildBody(model: string, systemPrompt: string, messages: Array<{ role: string; content: string }>, maxTokens: number) {
+  return JSON.stringify({
+    model,
+    messages: [{ role: "system", content: systemPrompt }, ...messages],
+    temperature: 0.7,
+    max_tokens: maxTokens,
+  });
+}
+
+async function callAI(
   messages: Array<{ role: string; content: string }>,
   systemPrompt: string,
   maxTokens = 2048,
   overrideKey?: string,
 ): Promise<Response> {
+  const openRouterKey = process.env.OPENAI_API_KEY;
+
+  // If user provided their own key, use OpenRouter with it
   if (overrideKey) {
-    return fetch(GROQ_BASE, {
+    return fetch(OPENROUTER_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${overrideKey}` },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        temperature: 0.7,
-        max_tokens: maxTokens,
-      }),
+      body: buildBody(OPENROUTER_MODEL, systemPrompt, messages, maxTokens),
     });
   }
 
-  const startIndex = currentKeyIndex;
-  let attempts = 0;
+  // Try OpenRouter first (primary)
+  if (openRouterKey) {
+    const res = await fetch(OPENROUTER_BASE, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openRouterKey}`,
+        "HTTP-Referer": "https://notesy.app",
+        "X-Title": "Notesy",
+      },
+      body: buildBody(OPENROUTER_MODEL, systemPrompt, messages, maxTokens),
+    });
+    if (res.ok) return res;
+    const isLimit = await isRateLimitError(res);
+    if (!isLimit) return res;
+    // rate limited — fall through to Groq
+  }
 
+  // Fallback: try Groq keys in rotation
+  let attempts = 0;
   while (attempts < GROQ_KEYS.length) {
     const key = GROQ_KEYS[currentKeyIndex];
     const response = await fetch(GROQ_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-        temperature: 0.7,
-        max_tokens: maxTokens,
-      }),
+      body: buildBody(GROQ_MODEL, systemPrompt, messages, maxTokens),
     });
-
-    if (response.status === 429 || response.status === 503) {
+    const isLimit = await isRateLimitError(response);
+    if (isLimit) {
       currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
       attempts++;
       continue;
     }
-
-    if (response.status === 400) {
-      const cloned = response.clone();
-      const body = await cloned.json().catch(() => ({})) as { error?: { message?: string } };
-      const msg = body?.error?.message ?? "";
-      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("token")) {
-        currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
-        attempts++;
-        continue;
-      }
-      return response;
-    }
-
     return response;
   }
 
+  // All exhausted — return last Groq attempt
   return fetch(GROQ_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_KEYS[currentKeyIndex]}` },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [{ role: "system", content: systemPrompt }, ...messages],
-      temperature: 0.7,
-      max_tokens: maxTokens,
-    }),
+    body: buildBody(GROQ_MODEL, systemPrompt, messages, maxTokens),
   });
 }
 
@@ -108,7 +118,7 @@ router.post("/chat", async (req, res) => {
   const groqMessages = messages.map((m) => ({ role: m.role === "model" ? "assistant" : "user", content: m.content }));
 
   try {
-    const response = await callGroqWithRotation(groqMessages, systemPrompt, 2048, overrideKey || undefined);
+    const response = await callAI(groqMessages, systemPrompt, 2048, overrideKey || undefined);
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({})) as Record<string, unknown>;
@@ -147,7 +157,7 @@ router.post("/generate-title", async (req, res) => {
   const overrideKey = parsed.data.apiKey || process.env.GROQ_API_KEY || undefined;
 
   try {
-    const response = await callGroqWithRotation(
+    const response = await callAI(
       [{ role: "user", content: firstMessage }],
       "Generate a concise 4-6 word title for a study session based on the user's message. Return ONLY the title, nothing else. No quotes, no punctuation at the end.",
       20,
