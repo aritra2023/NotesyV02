@@ -9,7 +9,7 @@ import {
 import {
   Copy, Edit2, Trash2, Youtube, Send, BookOpen,
   AlignLeft, Lightbulb, FileText, Search,
-  FileSearch, BookMarked, Plus, Check, Pin, PinOff,
+  FileSearch, BookMarked, Plus, Check, Pin, PinOff, X,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,8 +50,11 @@ export function ChatArea() {
   const [isTyping, setIsTyping] = useState(false);
   const [aiModal, setAiModal] = useState<"summary" | "cheatsheet" | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [pinnedIndex, setPinnedIndex] = useState(0);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSyncRef = useRef<string>(new Date(0).toISOString());
+  const msgRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const activeSubject = activeSession ? subjects.find((s) => s.id === activeSession.subjectId) : null;
@@ -199,8 +202,52 @@ export function ChatArea() {
   const activeMode = MODE_OPTIONS.find((m) => m.mode === answerMode);
   const hasMessages = sessionMessages.length > 0;
 
+  const pinnedMessages = sessionMessages.filter((m) => m.pinned);
+  const safePinnedIndex = pinnedMessages.length > 0 ? pinnedIndex % pinnedMessages.length : 0;
+  const currentPinned = pinnedMessages[safePinnedIndex];
+
+  const jumpToPinned = () => {
+    if (!currentPinned) return;
+    const el = msgRefs.current.get(currentPinned.id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedId(currentPinned.id);
+      setTimeout(() => setHighlightedId(null), 1800);
+    }
+    if (pinnedMessages.length > 1) {
+      setPinnedIndex((i) => (i + 1) % pinnedMessages.length);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-background relative">
+
+      {/* Telegram-style pin banner */}
+      {currentPinned && (
+        <div
+          className="flex items-center gap-2.5 px-4 py-2 bg-card border-b cursor-pointer hover:bg-muted/40 transition-colors shrink-0 group/pin"
+          onClick={jumpToPinned}
+        >
+          <div className="w-0.5 self-stretch rounded-full bg-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-primary mb-0.5 flex items-center gap-1">
+              <Pin className="h-2.5 w-2.5" />
+              Pinned Message {pinnedMessages.length > 1 ? `(${safePinnedIndex + 1}/${pinnedMessages.length})` : ""}
+            </p>
+            <p className="text-xs text-muted-foreground truncate leading-snug">
+              {currentPinned.content.replace(/[#*`>]/g, "").slice(0, 100)}{currentPinned.content.length > 100 ? "…" : ""}
+            </p>
+          </div>
+          <button
+            className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground opacity-0 group-hover/pin:opacity-100 hover:text-foreground hover:bg-muted transition-all shrink-0"
+            onClick={(e) => { e.stopPropagation(); togglePinMessage(currentPinned.id); }}
+            title="Unpin"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div
         className="flex-1 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24"
@@ -209,23 +256,15 @@ export function ChatArea() {
       >
         <div className="max-w-3xl mx-auto space-y-4 pb-2">
 
-          {/* Pinned messages strip */}
-          {sessionMessages.some((m) => m.pinned) && (
-            <div className="rounded-xl border border-yellow-300/60 bg-yellow-50/60 dark:bg-yellow-900/20 dark:border-yellow-700/40 px-3 py-2 space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
-                <Pin className="h-2.5 w-2.5" /> Pinned
-              </p>
-              {sessionMessages.filter((m) => m.pinned).map((m) => (
-                <div key={m.id} className="text-xs text-yellow-900 dark:text-yellow-200 line-clamp-2 leading-relaxed">
-                  {m.role === "user" ? "You: " : "Notesy: "}{m.content.slice(0, 120)}{m.content.length > 120 ? "…" : ""}
-                </div>
-              ))}
-            </div>
-          )}
-
           {sessionMessages.map((msg) => (
-            <div key={msg.id} className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-              <div className={`max-w-[88%] md:max-w-[82%] rounded-2xl px-3 md:px-4 py-2.5 md:py-3 ${
+            <div
+              key={msg.id}
+              ref={(el) => { if (el) msgRefs.current.set(msg.id, el); else msgRefs.current.delete(msg.id); }}
+              className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"} transition-all duration-300 ${highlightedId === msg.id ? "scale-[1.01]" : ""}`}
+            >
+              <div className={`max-w-[88%] md:max-w-[82%] rounded-2xl px-3 md:px-4 py-2.5 md:py-3 transition-all duration-300 ${
+                highlightedId === msg.id ? "ring-2 ring-primary ring-offset-2" : ""
+              } ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground rounded-br-sm shadow-sm"
                   : "bg-muted/50 border shadow-sm rounded-bl-sm"
