@@ -32,6 +32,8 @@ export type Message = {
   role: 'user' | 'model';
   content: string;
   createdAt: number;
+  reactions?: string[];
+  pinned?: boolean;
 };
 
 export type AppUser = {
@@ -53,12 +55,16 @@ type AppState = {
   answerMode: 'exam' | 'short' | 'explanation' | 'normal';
   youtubeMode: boolean;
   currentUser: AppUser | null;
+  darkMode: boolean;
 
   setApiKey: (key: string) => void;
   setColorMode: (mode: 'black' | 'purple' | 'blue' | 'green') => void;
   setFontMode: (mode: 'normal' | 'caveat' | 'patrick' | 'satisfy') => void;
   setAnswerMode: (mode: 'exam' | 'short' | 'explanation' | 'normal') => void;
   setYoutubeMode: (mode: boolean) => void;
+  toggleDarkMode: () => void;
+  toggleReaction: (messageId: string, emoji: string) => void;
+  togglePinMessage: (messageId: string) => void;
 
   createSubject: (name: string) => void;
   deleteSubject: (id: string) => void;
@@ -102,12 +108,31 @@ export const useStore = create<AppState>()(
       answerMode: 'normal',
       youtubeMode: false,
       currentUser: null,
+      darkMode: false,
 
       setApiKey: (key) => set({ apiKey: key }),
       setColorMode: (mode) => set({ colorMode: mode }),
       setFontMode: (mode) => set({ fontMode: mode }),
       setAnswerMode: (mode) => set({ answerMode: mode }),
       setYoutubeMode: (mode) => set({ youtubeMode: mode }),
+      toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
+      toggleReaction: (messageId, emoji) => set((state) => ({
+        messages: state.messages.map((m) => {
+          if (m.id !== messageId) return m;
+          const reactions = m.reactions ?? [];
+          return {
+            ...m,
+            reactions: reactions.includes(emoji)
+              ? reactions.filter((r) => r !== emoji)
+              : [...reactions, emoji],
+          };
+        }),
+      })),
+      togglePinMessage: (messageId) => set((state) => ({
+        messages: state.messages.map((m) =>
+          m.id === messageId ? { ...m, pinned: !m.pinned } : m
+        ),
+      })),
 
       createSubject: (name) => {
         const newSubject: Subject = { id: uuidv4(), name, createdAt: Date.now() };

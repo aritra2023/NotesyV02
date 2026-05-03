@@ -5,7 +5,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil, MoreHorizontal, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -66,6 +66,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [newSubjectName, setNewSubjectName] = useState("");
   const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const reviewDueCount = sessions.filter(
     (s) => s.reviewDate != null && s.reviewDate <= Date.now()
@@ -87,10 +88,24 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   return (
     <div className="w-full md:w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
-      <div className="px-4 py-3 border-b flex items-center gap-2 pr-12 md:pr-4">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex-1">Subjects</span>
+      <div className="px-3 py-2.5 border-b flex items-center gap-2 pr-12 md:pr-3">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">Subjects</span>
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="w-full bg-muted/60 border border-transparent focus:border-ring rounded-full text-xs pl-6 pr-2 py-1 outline-none placeholder:text-muted-foreground/60 transition-colors"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
         {reviewDueCount > 0 && (
-          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+          <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center shrink-0">
             {reviewDueCount}
           </span>
         )}
@@ -108,7 +123,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             className="w-full"
           >
             {subjects.map((subject) => {
-              const subjectSessions = sessions.filter((s) => s.subjectId === subject.id);
+              const q = search.toLowerCase().trim();
+              const subjectSessions = sessions
+                .filter((s) => s.subjectId === subject.id)
+                .filter((s) => !q || s.title.toLowerCase().includes(q) || subject.name.toLowerCase().includes(q));
+              if (q && subjectSessions.length === 0 && !subject.name.toLowerCase().includes(q)) return null;
               return (
                 <AccordionItem value={subject.id} key={subject.id} className="border-b-0">
                   <div className="group flex items-center justify-between px-4 py-2 hover:bg-sidebar-accent cursor-pointer transition-colors">

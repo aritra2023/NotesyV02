@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/Sidebar";
 import { ChatArea } from "@/components/ChatArea";
 import { NotesyLogo } from "@/components/NotesyLogo";
 import { useStore } from "@/store/useStore";
 import { Button } from "@/components/ui/button";
 import { useCreateInvite } from "@workspace/api-client-react";
-import { Share2, Settings, Menu, FileDown, Palette, User, Lock, Eye, EyeOff, Check } from "lucide-react";
+import { Share2, Settings, Menu, FileDown, Palette, User, Lock, Eye, EyeOff, Check, Moon, Sun } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -29,7 +29,12 @@ export default function MainPage() {
     colorMode, setColorMode,
     activeSessionId, sessions, subjects, messages,
     markSessionShared, currentUser, updateUser,
+    darkMode, toggleDarkMode,
   } = useStore();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -135,6 +140,15 @@ export default function MainPage() {
             </Button>
           )}
           <div className="h-8 flex items-center bg-muted rounded-full px-1 border gap-0.5">
+            {/* Dark mode toggle */}
+            <Button
+              variant="ghost" size="icon"
+              className="h-6 w-6 rounded-full hover:bg-background"
+              onClick={toggleDarkMode}
+              title={darkMode ? "Light mode" : "Dark mode"}
+            >
+              {darkMode ? <Sun className="w-3.5 h-3.5 text-yellow-400" /> : <Moon className="w-3.5 h-3.5 text-foreground" />}
+            </Button>
             {/* Color dot (keeps quick cycling) */}
             <Button
               variant="ghost" size="icon"

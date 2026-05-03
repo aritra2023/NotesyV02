@@ -9,7 +9,7 @@ import {
 import {
   Copy, Edit2, Trash2, Youtube, Send, BookOpen,
   AlignLeft, Lightbulb, FileText, Search,
-  FileSearch, BookMarked, Plus, Check,
+  FileSearch, BookMarked, Plus, Check, Pin, PinOff,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -43,6 +43,7 @@ export function ChatArea() {
     addMessage, deleteMessageFromId, updateSessionTitle,
     apiKey, colorMode, fontMode, answerMode, youtubeMode,
     setAnswerMode, setYoutubeMode, addRemoteMessages,
+    toggleReaction, togglePinMessage,
   } = useStore();
 
   const [input, setInput] = useState("");
@@ -207,6 +208,21 @@ export function ChatArea() {
         style={{ maskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)", WebkitMaskImage: "linear-gradient(to bottom, black calc(100% - 72px), transparent 100%)" }}
       >
         <div className="max-w-3xl mx-auto space-y-4 pb-2">
+
+          {/* Pinned messages strip */}
+          {sessionMessages.some((m) => m.pinned) && (
+            <div className="rounded-xl border border-yellow-300/60 bg-yellow-50/60 dark:bg-yellow-900/20 dark:border-yellow-700/40 px-3 py-2 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-yellow-700 dark:text-yellow-400 flex items-center gap-1">
+                <Pin className="h-2.5 w-2.5" /> Pinned
+              </p>
+              {sessionMessages.filter((m) => m.pinned).map((m) => (
+                <div key={m.id} className="text-xs text-yellow-900 dark:text-yellow-200 line-clamp-2 leading-relaxed">
+                  {m.role === "user" ? "You: " : "Notesy: "}{m.content.slice(0, 120)}{m.content.length > 120 ? "…" : ""}
+                </div>
+              ))}
+            </div>
+          )}
+
           {sessionMessages.map((msg) => (
             <div key={msg.id} className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
               <div className={`max-w-[88%] md:max-w-[82%] rounded-2xl px-3 md:px-4 py-2.5 md:py-3 ${
@@ -222,9 +238,41 @@ export function ChatArea() {
                   </div>
                 )}
               </div>
+
+              {/* Reactions display */}
+              {msg.reactions && msg.reactions.length > 0 && (
+                <div className={`flex items-center gap-1 mt-1 flex-wrap ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.reactions.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => toggleReaction(msg.id, emoji)}
+                      className="text-sm bg-muted border rounded-full px-2 py-0.5 hover:bg-primary/10 transition-colors"
+                    >{emoji}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* Action row */}
               <div className={`flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => handleCopy(msg.content)} title="Copy">
                   <Copy className="h-3 w-3" />
+                </button>
+                {/* Reactions picker */}
+                {["👍","✅","⭐","💡","🔥"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    className={`h-5 px-1 flex items-center justify-center rounded text-xs transition-colors ${msg.reactions?.includes(emoji) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                    onClick={() => toggleReaction(msg.id, emoji)}
+                    title={`React ${emoji}`}
+                  >{emoji}</button>
+                ))}
+                {/* Pin */}
+                <button
+                  className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${msg.pinned ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500 hover:bg-muted"}`}
+                  onClick={() => togglePinMessage(msg.id)}
+                  title={msg.pinned ? "Unpin" : "Pin"}
+                >
+                  {msg.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
                 </button>
                 {msg.role === "user" && (
                   <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }} title="Edit">
@@ -239,11 +287,14 @@ export function ChatArea() {
           ))}
 
           {isTyping && (
-            <div className="flex items-start">
-              <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-5 py-4 w-20 shadow-sm flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce" />
+            <div className="flex items-start gap-2.5">
+              <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" />
+                </div>
+                <span className="text-xs text-muted-foreground">Notesy is thinking…</span>
               </div>
             </div>
           )}
