@@ -64,8 +64,19 @@ async function callGroqWithRotation(
     if (response.status === 429 || response.status === 503) {
       currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
       attempts++;
-      if (currentKeyIndex === startIndex) break;
       continue;
+    }
+
+    if (response.status === 400) {
+      const cloned = response.clone();
+      const body = await cloned.json().catch(() => ({})) as { error?: { message?: string } };
+      const msg = body?.error?.message ?? "";
+      if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("token")) {
+        currentKeyIndex = (currentKeyIndex + 1) % GROQ_KEYS.length;
+        attempts++;
+        continue;
+      }
+      return response;
     }
 
     return response;
