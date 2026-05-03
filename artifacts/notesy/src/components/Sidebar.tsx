@@ -201,7 +201,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               <span
                                 className="flex-1 min-w-0 truncate"
                                 title={session.title}
-                              >{session.title}</span>
+                              >{(() => { const w = session.title.split(" "); return w.length > 3 ? w.slice(0, 3).join(" ") + "…" : session.title; })()}</span>
                             )}
 
                             <ReviewBadge reviewDate={session.reviewDate ?? null} />
