@@ -5,7 +5,7 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil } from "lucide-react";
+import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil, MoreHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -161,73 +161,64 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         subjectSessions.map((session) => (
                           <div
                             key={session.id}
-                            className={`group flex items-center justify-between py-2 px-2 rounded-md cursor-pointer text-sm transition-colors ${
+                            className={`flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors ${
                               activeSessionId === session.id
                                 ? "bg-primary text-primary-foreground font-medium"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
                             }`}
                             onClick={() => handleSelectSession(subject.id, session.id)}
                           >
-                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                              <FileText className="h-3.5 w-3.5 shrink-0" />
-                              {editingSessionId === session.id ? (
+                            <FileText className="h-3.5 w-3.5 shrink-0" />
+
+                            {editingSessionId === session.id ? (
+                              <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                                 <InlineEdit
                                   value={session.title}
                                   onSave={(title) => { updateSessionTitle(session.id, title); setEditingSessionId(null); }}
                                   onCancel={() => setEditingSessionId(null)}
                                 />
-                              ) : (
-                                <span className="truncate block min-w-0" onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}>
-                                  {session.title}
-                                </span>
-                              )}
-                              <ReviewBadge reviewDate={session.reviewDate ?? null} />
-                            </div>
+                              </div>
+                            ) : (
+                              <span className="truncate flex-1 min-w-0">{session.title}</span>
+                            )}
 
-                            <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity ml-1">
-                              <Button
-                                variant="ghost" size="icon"
-                                className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
-                                onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}
-                                title="Rename"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
+                            <ReviewBadge reviewDate={session.reviewDate ?? null} />
 
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost" size="icon"
-                                    className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    title="Review reminder"
-                                  >
-                                    <Calendar className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent side="right" onClick={(e) => e.stopPropagation()}>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 1)}>Review in 1 day</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 3)}>Review in 3 days</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => markForReview(session.id, 7)}>Review in 7 days</DropdownMenuItem>
-                                  {session.reviewDate && (
-                                    <>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem className="text-destructive" onClick={() => clearReview(session.id)}>
-                                        <X className="h-3 w-3 mr-1" /> Clear reminder
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-
-                              <Button
-                                variant="ghost" size="icon"
-                                className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
-                                onClick={(e) => { e.stopPropagation(); if (confirm("Delete session?")) deleteSession(session.id); }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost" size="icon"
+                                  className={`h-5 w-5 shrink-0 rounded ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent side="right" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={() => setEditingSessionId(session.id)}>
+                                  <Pencil className="h-3.5 w-3.5 mr-2" /> Rename
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => markForReview(session.id, 1)}>
+                                  <Calendar className="h-3.5 w-3.5 mr-2" /> Review in 1 day
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => markForReview(session.id, 3)}>
+                                  <Calendar className="h-3.5 w-3.5 mr-2" /> Review in 3 days
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => markForReview(session.id, 7)}>
+                                  <Calendar className="h-3.5 w-3.5 mr-2" /> Review in 7 days
+                                </DropdownMenuItem>
+                                {session.reviewDate && (
+                                  <DropdownMenuItem className="text-destructive" onClick={() => clearReview(session.id)}>
+                                    <X className="h-3.5 w-3.5 mr-2" /> Clear reminder
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onClick={() => { if (confirm("Delete session?")) deleteSession(session.id); }}>
+                                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         ))
                       )}
