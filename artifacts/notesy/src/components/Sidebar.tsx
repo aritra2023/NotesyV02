@@ -161,7 +161,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         subjectSessions.map((session) => (
                           <div
                             key={session.id}
-                            className={`flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors ${
+                            className={`group/item flex items-center gap-1 py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors ${
                               activeSessionId === session.id
                                 ? "bg-primary text-primary-foreground font-medium"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
@@ -188,7 +188,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost" size="icon"
-                                  className={`h-5 w-5 shrink-0 rounded ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+                                  className={`h-5 w-5 shrink-0 rounded opacity-0 group-hover/item:opacity-100 transition-opacity ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white hover:bg-white/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreHorizontal className="h-3 w-3" />
