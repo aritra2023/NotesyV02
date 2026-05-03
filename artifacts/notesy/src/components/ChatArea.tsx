@@ -223,8 +223,8 @@ export function ChatArea() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 md:p-5" ref={scrollRef}>
-        <div className="max-w-3xl mx-auto space-y-4 pb-4">
+      <div className="flex-1 overflow-y-auto p-3 md:p-5 pb-20 md:pb-24" ref={scrollRef}>
+        <div className="max-w-3xl mx-auto space-y-4 pb-2">
           {sessionMessages.map((msg) => (
             <div key={msg.id} className={`group flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
               <div className={`max-w-[88%] md:max-w-[82%] rounded-2xl px-3 md:px-4 py-2.5 md:py-3 ${
@@ -268,10 +268,10 @@ export function ChatArea() {
         </div>
       </div>
 
-      {/* Input */}
-      <div className="p-2 md:p-3 bg-background border-t shrink-0">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-1 bg-card border rounded-full px-2 py-1.5 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
+      {/* Input — floating */}
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-2 md:px-6 md:pb-4 pointer-events-none">
+        <div className="max-w-3xl mx-auto pointer-events-auto">
+          <div className="flex items-center gap-1 bg-card/90 backdrop-blur-md border rounded-full px-2 py-1.5 shadow-lg focus-within:ring-1 focus-within:ring-ring transition-shadow">
 
             {/* + button + inline badge */}
             <div className="flex items-center gap-1 shrink-0">
