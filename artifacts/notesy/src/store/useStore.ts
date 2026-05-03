@@ -49,7 +49,7 @@ type AppState = {
   messages: Message[];
   activeSessionId: string | null;
   activeSubjectId: string | null;
-  colorMode: 'black' | 'purple' | 'blue' | 'green';
+  colorMode: 'black' | 'purple' | 'blue' | 'green' | 'teal';
   fontMode: 'normal' | 'caveat' | 'patrick' | 'satisfy';
   apiKey: string;
   answerMode: 'exam' | 'short' | 'explanation' | 'normal';
@@ -58,7 +58,7 @@ type AppState = {
   darkMode: boolean;
 
   setApiKey: (key: string) => void;
-  setColorMode: (mode: 'black' | 'purple' | 'blue' | 'green') => void;
+  setColorMode: (mode: 'black' | 'purple' | 'blue' | 'green' | 'teal') => void;
   setFontMode: (mode: 'normal' | 'caveat' | 'patrick' | 'satisfy') => void;
   setAnswerMode: (mode: 'exam' | 'short' | 'explanation' | 'normal') => void;
   setYoutubeMode: (mode: boolean) => void;

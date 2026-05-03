@@ -17,11 +17,12 @@ import { Separator } from "@/components/ui/separator";
 import { marked } from "marked";
 import { toast } from "sonner";
 
-const COLOR_OPTIONS: { value: "black" | "purple" | "blue" | "green"; label: string; dot: string }[] = [
+const COLOR_OPTIONS: { value: "black" | "purple" | "blue" | "green" | "teal"; label: string; dot: string }[] = [
   { value: "black", label: "Default", dot: "bg-gray-900" },
   { value: "purple", label: "Purple", dot: "bg-purple-500" },
   { value: "blue", label: "Blue", dot: "bg-blue-500" },
   { value: "green", label: "Green", dot: "bg-green-500" },
+  { value: "teal", label: "Teal", dot: "bg-teal-500" },
 ];
 
 export default function MainPage() {
@@ -154,14 +155,14 @@ export default function MainPage() {
               variant="ghost" size="icon"
               className="h-6 w-6 rounded-full hover:bg-background"
               onClick={() => {
-                const modes: ("black" | "purple" | "blue" | "green")[] = ["black", "purple", "blue", "green"];
+                const modes: ("black" | "purple" | "blue" | "green" | "teal")[] = ["black", "purple", "blue", "green", "teal"];
                 setColorMode(modes[(modes.indexOf(colorMode) + 1) % modes.length]);
               }}
               title="Cycle heading color"
             >
               <div className={`w-3.5 h-3.5 rounded-full shadow-inner ${
                 colorMode === "purple" ? "bg-purple-500" : colorMode === "blue" ? "bg-blue-500" :
-                colorMode === "green" ? "bg-green-500" : "bg-gray-900"
+                colorMode === "green" ? "bg-green-500" : colorMode === "teal" ? "bg-teal-500" : "bg-gray-900"
               }`} />
             </Button>
             {/* Settings icon */}

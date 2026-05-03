@@ -200,6 +200,7 @@ export function ChatArea() {
   const colorClass = {
     black: "prose-headings:text-gray-900", purple: "prose-headings:text-purple-600",
     blue: "prose-headings:text-blue-600", green: "prose-headings:text-green-600",
+    teal: "prose-headings:text-teal-600",
   }[colorMode];
 
   const activeMode = MODE_OPTIONS.find((m) => m.mode === answerMode);
