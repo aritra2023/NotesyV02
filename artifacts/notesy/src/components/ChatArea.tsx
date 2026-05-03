@@ -43,7 +43,7 @@ export function ChatArea() {
     addMessage, deleteMessageFromId, updateSessionTitle,
     apiKey, colorMode, fontMode, answerMode, youtubeMode,
     setAnswerMode, setYoutubeMode, addRemoteMessages,
-    toggleReaction, togglePinMessage,
+    togglePinMessage,
   } = useStore();
 
   const [input, setInput] = useState("");
@@ -239,33 +239,11 @@ export function ChatArea() {
                 )}
               </div>
 
-              {/* Reactions display */}
-              {msg.reactions && msg.reactions.length > 0 && (
-                <div className={`flex items-center gap-1 mt-1 flex-wrap ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  {msg.reactions.map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => toggleReaction(msg.id, emoji)}
-                      className="text-sm bg-muted border rounded-full px-2 py-0.5 hover:bg-primary/10 transition-colors"
-                    >{emoji}</button>
-                  ))}
-                </div>
-              )}
-
               {/* Action row */}
               <div className={`flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => handleCopy(msg.content)} title="Copy">
                   <Copy className="h-3 w-3" />
                 </button>
-                {/* Reactions picker */}
-                {["👍","✅","⭐","💡","🔥"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    className={`h-5 px-1 flex items-center justify-center rounded text-xs transition-colors ${msg.reactions?.includes(emoji) ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-                    onClick={() => toggleReaction(msg.id, emoji)}
-                    title={`React ${emoji}`}
-                  >{emoji}</button>
-                ))}
                 {/* Pin */}
                 <button
                   className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${msg.pinned ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500 hover:bg-muted"}`}
