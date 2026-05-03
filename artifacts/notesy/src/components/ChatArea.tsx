@@ -4,14 +4,13 @@ import { useSendChatMessage, useGenerateSessionTitle } from "@workspace/api-clie
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import {
   Copy, Edit2, Trash2, Youtube, Send, BookOpen,
-  AlignLeft, Lightbulb, FileText, Search, FileSearch,
-  BookMarked, Plus, Check, Pencil,
+  AlignLeft, Lightbulb, FileText, Search,
+  FileSearch, BookMarked, Plus, Check,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -50,8 +49,6 @@ export function ChatArea() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [aiModal, setAiModal] = useState<"summary" | "cheatsheet" | null>(null);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSyncRef = useRef<string>(new Date(0).toISOString());
@@ -71,7 +68,6 @@ export function ChatArea() {
     }, 50);
   };
 
-  // Real-time polling for shared sessions
   const pollSharedMessages = useCallback(async () => {
     if (!activeSessionId || !activeSession?.isShared) return;
     try {
@@ -87,15 +83,12 @@ export function ChatArea() {
     } catch { /* ignore */ }
   }, [activeSessionId, activeSession?.isShared, addRemoteMessages]);
 
-  // Reset sync cursor when session changes
   useEffect(() => {
     lastSyncRef.current = new Date(0).toISOString();
   }, [activeSessionId]);
 
-  // Poll every 3 seconds when in a shared session
   useEffect(() => {
     if (!activeSession?.isShared) return;
-    // Initial fetch of all existing server messages
     lastSyncRef.current = new Date(0).toISOString();
     pollSharedMessages();
     const interval = setInterval(pollSharedMessages, 3000);
@@ -114,7 +107,7 @@ export function ChatArea() {
       setYoutubeMode(false);
       try {
         const r = await fetch(`${BASE}/api/youtube-search?q=${encodeURIComponent(content)}`);
-        const data = await r.json() as { videos?: YoutubeVideo[]; error?: string };
+        const data = await r.json() as { videos?: YoutubeVideo[] };
         if (data.videos && data.videos.length > 0) {
           const md = `## 🎬 Top ${data.videos.length} Results for "${content}"\n\n` +
             data.videos.map((v, i) =>
@@ -122,7 +115,7 @@ export function ChatArea() {
             ).join("\n\n");
           addMessage(activeSessionId, "model", md);
         } else {
-          addMessage(activeSessionId, "model", `No results found. [Search on YouTube directly](https://www.youtube.com/results?search_query=${encodeURIComponent(content)})`);
+          addMessage(activeSessionId, "model", `No results. [Search on YouTube](https://www.youtube.com/results?search_query=${encodeURIComponent(content)})`);
         }
       } catch {
         addMessage(activeSessionId, "model", `[Search YouTube for "${content}"](https://www.youtube.com/results?search_query=${encodeURIComponent(content)})`);
@@ -134,18 +127,12 @@ export function ChatArea() {
     }
 
     const isFirstMessage = sessionMessages.length === 0;
-
-    // Immediately name session from first message
     if (isFirstMessage) {
-      const quickTitle = content.trim().split(/\s+/).slice(0, 6).join(" ");
-      updateSessionTitle(activeSessionId, quickTitle);
+      updateSessionTitle(activeSessionId, content.trim().split(/\s+/).slice(0, 6).join(" "));
     }
 
     const userMsgId = addMessage(activeSessionId, "user", content);
-    // Sync user message if shared
-    if (activeSession?.isShared) {
-      postSyncMessage(activeSessionId, "user", content, userMsgId);
-    }
+    if (activeSession?.isShared) postSyncMessage(activeSessionId, "user", content, userMsgId);
 
     setIsTyping(true);
     scrollToBottom();
@@ -162,19 +149,13 @@ export function ChatArea() {
       });
 
       const modelMsgId = addMessage(activeSessionId, "model", res.reply);
-      // Sync AI response if shared
-      if (activeSession?.isShared) {
-        postSyncMessage(activeSessionId, "model", res.reply, modelMsgId);
-      }
+      if (activeSession?.isShared) postSyncMessage(activeSessionId, "model", res.reply, modelMsgId);
       scrollToBottom();
 
-      // Refine title with AI after first message
       if (isFirstMessage) {
-        generateTitleMutation.mutateAsync({
-          data: { apiKey, firstMessage: content },
-        }).then((titleRes) => {
-          updateSessionTitle(activeSessionId, titleRes.title);
-        }).catch(() => {});
+        generateTitleMutation.mutateAsync({ data: { apiKey, firstMessage: content } })
+          .then((r) => updateSessionTitle(activeSessionId, r.title))
+          .catch(() => {});
       }
     } catch (err: unknown) {
       const msg =
@@ -191,11 +172,6 @@ export function ChatArea() {
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
     toast.success("Copied!");
-  };
-
-  const saveTitle = () => {
-    if (activeSessionId && titleDraft.trim()) updateSessionTitle(activeSessionId, titleDraft.trim());
-    setEditingTitle(false);
   };
 
   if (!activeSession) {
@@ -221,59 +197,28 @@ export function ChatArea() {
   }[colorMode];
 
   const activeMode = MODE_OPTIONS.find((m) => m.mode === answerMode);
+  const hasMessages = sessionMessages.length > 0;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-background relative">
-      {/* Session Header */}
-      <div className="h-14 border-b flex items-center justify-between px-4 bg-card shrink-0">
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-0.5 truncate">
+      {/* Slim session header — subject + live badge + avatars only */}
+      <div className="h-11 border-b flex items-center justify-between px-4 bg-card shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest truncate">
             {activeSubject?.name}
-            {activeSession.isShared && (
-              <span className="ml-2 text-[9px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full dark:bg-green-950 dark:text-green-400 font-semibold normal-case tracking-normal">
-                Live
-              </span>
-            )}
-          </div>
-          {editingTitle ? (
-            <Input
-              autoFocus value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-              className="h-6 font-bold text-sm px-1 py-0 border-0 border-b rounded-none focus-visible:ring-0 shadow-none w-48"
-            />
-          ) : (
-            <div
-              className="group flex items-center gap-1 cursor-pointer w-fit max-w-full"
-              onClick={() => { setTitleDraft(activeSession.title); setEditingTitle(true); }}
-            >
-              <span className="font-bold text-sm md:text-base leading-none truncate max-w-[140px] md:max-w-xs">{activeSession.title}</span>
-              <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
-            </div>
+          </span>
+          {activeSession.isShared && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full dark:bg-green-950 dark:text-green-400 font-bold shrink-0">
+              Live
+            </span>
           )}
         </div>
-
-        <div className="flex items-center gap-1 shrink-0 ml-2">
-          <div className="flex -space-x-1.5">
-            {activeSession.participants.slice(0, 3).map((p, i) => (
-              <Avatar key={i} className={`h-6 w-6 border-2 border-background ${p.color}`}>
-                <AvatarFallback className="text-[9px] text-white">{p.initials}</AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-          {sessionMessages.length > 0 && (
-            <>
-              <Button variant="ghost" size="sm" className="h-7 px-1.5 md:px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setAiModal("summary")}>
-                <FileSearch className="h-3.5 w-3.5 md:mr-1" />
-                <span className="hidden md:inline">Summary</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-1.5 md:px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setAiModal("cheatsheet")}>
-                <BookMarked className="h-3.5 w-3.5 md:mr-1" />
-                <span className="hidden md:inline">Cheat Sheet</span>
-              </Button>
-            </>
-          )}
+        <div className="flex -space-x-1.5 shrink-0">
+          {activeSession.participants.slice(0, 3).map((p, i) => (
+            <Avatar key={i} className={`h-5 w-5 border-2 border-background ${p.color}`}>
+              <AvatarFallback className="text-[8px] text-white">{p.initials}</AvatarFallback>
+            </Avatar>
+          ))}
         </div>
       </div>
 
@@ -295,27 +240,16 @@ export function ChatArea() {
                   </div>
                 )}
               </div>
-
-              {/* Action buttons — tiny row below message on hover */}
               <div className={`flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                <button
-                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  onClick={() => handleCopy(msg.content)} title="Copy"
-                >
+                <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => handleCopy(msg.content)} title="Copy">
                   <Copy className="h-3 w-3" />
                 </button>
                 {msg.role === "user" && (
-                  <button
-                    className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }} title="Edit"
-                  >
+                  <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" onClick={() => { setInput(msg.content); deleteMessageFromId(activeSessionId, msg.id); }} title="Edit">
                     <Edit2 className="h-3 w-3" />
                   </button>
                 )}
-                <button
-                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  onClick={() => deleteMessageFromId(activeSessionId, msg.id)} title="Delete"
-                >
+                <button className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => deleteMessageFromId(activeSessionId, msg.id)} title="Delete">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>
@@ -323,7 +257,7 @@ export function ChatArea() {
           ))}
 
           {isTyping && (
-            <div className="flex flex-col items-start">
+            <div className="flex items-start">
               <div className="bg-muted/50 border rounded-2xl rounded-bl-sm px-5 py-4 w-20 shadow-sm flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.3s]" />
                 <div className="w-1.5 h-1.5 bg-primary/50 rounded-full animate-bounce [animation-delay:-0.15s]" />
@@ -334,27 +268,24 @@ export function ChatArea() {
         </div>
       </div>
 
-      {/* Input Area */}
+      {/* Input */}
       <div className="p-2 md:p-4 bg-background border-t shrink-0">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-end gap-1.5 bg-card border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-ring transition-shadow">
 
-            {/* + button and active mode badge — always inline */}
+            {/* + button + inline badge */}
             <div className="flex items-center gap-1 shrink-0 mb-0.5">
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost" size="icon"
-                    className="h-8 w-8 rounded-lg relative"
-                    title="Answer mode"
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg relative" title="Options">
                     <Plus className="h-4 w-4" />
                     {(answerMode !== "normal" || youtubeMode) && (
                       <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent side="top" align="start" className="w-48 p-1.5">
+                <PopoverContent side="top" align="start" className="w-52 p-1.5">
+                  {/* Answer modes */}
                   <p className="text-[10px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">Answer Mode</p>
                   {MODE_OPTIONS.map(({ mode, label, icon: Icon }) => (
                     <button
@@ -367,7 +298,10 @@ export function ChatArea() {
                       {answerMode === mode && <Check className="h-3 w-3 ml-auto" />}
                     </button>
                   ))}
+
                   <div className="border-t my-1" />
+
+                  {/* YouTube */}
                   <button
                     className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm transition-colors ${youtubeMode ? "bg-red-50 text-red-600 font-medium dark:bg-red-950/30 dark:text-red-400" : "hover:bg-muted text-foreground"}`}
                     onClick={() => { setYoutubeMode(!youtubeMode); setPopoverOpen(false); }}
@@ -376,10 +310,32 @@ export function ChatArea() {
                     YouTube Search
                     {youtubeMode && <Check className="h-3 w-3 ml-auto" />}
                   </button>
+
+                  {/* AI Tools — only when there are messages */}
+                  {hasMessages && (
+                    <>
+                      <div className="border-t my-1" />
+                      <p className="text-[10px] font-semibold text-muted-foreground px-2 py-1 uppercase tracking-wider">AI Tools</p>
+                      <button
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm hover:bg-muted text-foreground transition-colors"
+                        onClick={() => { setAiModal("summary"); setPopoverOpen(false); }}
+                      >
+                        <FileSearch className="h-3.5 w-3.5 shrink-0" />
+                        AI Summary
+                      </button>
+                      <button
+                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sm hover:bg-muted text-foreground transition-colors"
+                        onClick={() => { setAiModal("cheatsheet"); setPopoverOpen(false); }}
+                      >
+                        <BookMarked className="h-3.5 w-3.5 shrink-0" />
+                        Cheat Sheet
+                      </button>
+                    </>
+                  )}
                 </PopoverContent>
               </Popover>
 
-              {/* Mode badge — right next to + button, same row */}
+              {/* Active mode badge */}
               {(answerMode !== "normal" || youtubeMode) && (
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${youtubeMode ? "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400" : "bg-primary/10 text-primary"}`}>
                   {youtubeMode ? "YouTube" : activeMode?.label}
@@ -395,12 +351,7 @@ export function ChatArea() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             />
 
-            <Button
-              size="icon"
-              className="h-8 w-8 rounded-lg shrink-0 mb-0.5"
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-            >
+            <Button size="icon" className="h-8 w-8 rounded-lg shrink-0 mb-0.5" onClick={handleSend} disabled={!input.trim() || isTyping}>
               {youtubeMode ? <Search className="h-4 w-4" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
