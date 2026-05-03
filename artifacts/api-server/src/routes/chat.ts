@@ -4,7 +4,7 @@ import { SendChatMessageBody, GenerateSessionTitleBody } from "@workspace/api-zo
 const router = Router();
 
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
 
 const GROQ_BASE = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -49,7 +49,7 @@ async function callAI(
   maxTokens = 2048,
   overrideKey?: string,
 ): Promise<Response> {
-  const openRouterKey = process.env.OPENAI_API_KEY;
+  const openRouterKey = process.env.OPENAI_API_KEY?.trim();
 
   // If user provided their own key, use OpenRouter with it
   if (overrideKey) {
@@ -62,20 +62,22 @@ async function callAI(
 
   // Try OpenRouter first (primary)
   if (openRouterKey) {
-    const res = await fetch(OPENROUTER_BASE, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openRouterKey}`,
-        "HTTP-Referer": "https://notesy.app",
-        "X-Title": "Notesy",
-      },
-      body: buildBody(OPENROUTER_MODEL, systemPrompt, messages, maxTokens),
-    });
-    if (res.ok) return res;
-    const isLimit = await isRateLimitError(res);
-    if (!isLimit) return res;
-    // rate limited — fall through to Groq
+    try {
+      const res = await fetch(OPENROUTER_BASE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${openRouterKey}`,
+          "HTTP-Referer": "https://notesy.app",
+          "X-Title": "Notesy",
+        },
+        body: buildBody(OPENROUTER_MODEL, systemPrompt, messages, maxTokens),
+      });
+      if (res.ok) return res;
+      // Any failure — fall through to Groq
+    } catch {
+      // Network error — fall through to Groq
+    }
   }
 
   // Fallback: try Groq keys in rotation
@@ -112,7 +114,7 @@ router.post("/chat", async (req, res) => {
   }
 
   const { messages, answerMode } = parsed.data;
-  const overrideKey = parsed.data.apiKey || process.env.GROQ_API_KEY || undefined;
+  const overrideKey = parsed.data.apiKey || undefined;
 
   const systemPrompt = ANSWER_MODE_INSTRUCTIONS[answerMode] || ANSWER_MODE_INSTRUCTIONS.normal;
   const groqMessages = messages.map((m) => ({ role: m.role === "model" ? "assistant" : "user", content: m.content }));
@@ -154,7 +156,7 @@ router.post("/generate-title", async (req, res) => {
   }
 
   const { firstMessage } = parsed.data;
-  const overrideKey = parsed.data.apiKey || process.env.GROQ_API_KEY || undefined;
+  const overrideKey = parsed.data.apiKey || undefined;
 
   try {
     const response = await callAI(
