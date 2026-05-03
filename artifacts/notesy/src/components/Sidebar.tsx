@@ -199,7 +199,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                               </div>
                             ) : (
                               <span
-                                className="flex-1 min-w-0 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                className="flex-1 min-w-0 truncate"
                                 title={session.title}
                               >{session.title}</span>
                             )}
