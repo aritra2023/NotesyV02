@@ -6,7 +6,6 @@ import {
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Trash2, Folder, FileText, Calendar, X, Pencil } from "lucide-react";
-import { NotesyLogo } from "@/components/NotesyLogo";
 import { Input } from "@/components/ui/input";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -90,8 +89,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     <div className="w-full md:w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
       <div className="p-4 border-b flex items-center justify-between pr-12 md:pr-4">
         <div className="flex items-center gap-2">
-          <NotesyLogo size={26} />
-          <h2 className="font-bold text-base text-primary tracking-tight">Notesy</h2>
           {reviewDueCount > 0 && (
             <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
               {reviewDueCount}

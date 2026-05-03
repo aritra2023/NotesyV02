@@ -113,8 +113,7 @@ export default function MainPage() {
           <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" strokeWidth={2.8} />
           </Button>
-          <NotesyLogo size={30} className="md:hidden" />
-          <span className="font-bold text-base tracking-tight text-primary md:hidden">Notesy</span>
+          <span className="font-bold text-base tracking-tight text-primary">Notesy</span>
         </div>
 
         <div className="flex items-center gap-2">
