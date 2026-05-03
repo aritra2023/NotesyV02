@@ -49,7 +49,11 @@ function InlineEdit({ value, onSave, onCancel }: { value: string; onSave: (v: st
   );
 }
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const {
     subjects, sessions, activeSessionId, activeSubjectId,
     createSubject, deleteSubject, updateSubjectName,
@@ -76,8 +80,14 @@ export function AppSidebar() {
     }
   };
 
+  const handleSelectSession = (subjectId: string, sessionId: string) => {
+    setActiveSubject(subjectId);
+    setActiveSession(sessionId);
+    onNavigate?.();
+  };
+
   return (
-    <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
+    <div className="w-full md:w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full">
       <div className="p-4 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <NotesyLogo size={26} />
@@ -99,7 +109,11 @@ export function AppSidebar() {
             No subjects yet.<br />Create one to get started.
           </div>
         ) : (
-          <Accordion type="multiple" defaultValue={activeSubjectId ? [activeSubjectId] : []} className="w-full">
+          <Accordion
+            type="multiple"
+            defaultValue={activeSubjectId ? [activeSubjectId] : []}
+            className="w-full"
+          >
             {subjects.map((subject) => {
               const subjectSessions = sessions.filter((s) => s.subjectId === subject.id);
               return (
@@ -125,21 +139,21 @@ export function AppSidebar() {
                     </AccordionTrigger>
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity shrink-0">
                       <Button
-                        variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary"
+                        variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
                         onClick={(e) => { e.stopPropagation(); setEditingSubjectId(subject.id); }}
                         title="Rename"
                       >
-                        <Pencil className="h-3 w-3" />
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button
-                        variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         onClick={(e) => { e.stopPropagation(); if (confirm("Delete subject and all its sessions?")) deleteSubject(subject.id); }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                       <Button
-                        variant="ghost" size="icon" className="h-6 w-6 text-primary"
-                        onClick={(e) => { e.stopPropagation(); createSession(subject.id); }}
+                        variant="ghost" size="icon" className="h-7 w-7 text-primary"
+                        onClick={(e) => { e.stopPropagation(); createSession(subject.id); onNavigate?.(); }}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -149,17 +163,17 @@ export function AppSidebar() {
                   <AccordionContent className="pb-0">
                     <div className="pl-6 ml-4 border-l border-sidebar-border py-1 flex flex-col gap-1">
                       {subjectSessions.length === 0 ? (
-                        <div className="text-xs text-muted-foreground py-2 pl-2">No sessions</div>
+                        <div className="text-xs text-muted-foreground py-2 pl-2">No sessions yet</div>
                       ) : (
                         subjectSessions.map((session) => (
                           <div
                             key={session.id}
-                            className={`group flex items-center justify-between py-1.5 px-2 rounded-md cursor-pointer text-sm transition-colors ${
+                            className={`group flex items-center justify-between py-2 px-2 rounded-md cursor-pointer text-sm transition-colors ${
                               activeSessionId === session.id
                                 ? "bg-primary text-primary-foreground font-medium"
                                 : "text-sidebar-foreground hover:bg-sidebar-accent"
                             }`}
-                            onClick={() => { setActiveSubject(subject.id); setActiveSession(session.id); }}
+                            onClick={() => handleSelectSession(subject.id, session.id)}
                           >
                             <div className="flex items-center gap-2 truncate pr-1 min-w-0 flex-1">
                               <FileText className="h-3.5 w-3.5 shrink-0" />
@@ -170,11 +184,7 @@ export function AppSidebar() {
                                   onCancel={() => setEditingSessionId(null)}
                                 />
                               ) : (
-                                <span
-                                  className="truncate"
-                                  onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}
-                                  title="Double-click to rename"
-                                >
+                                <span className="truncate" onDoubleClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}>
                                   {session.title}
                                 </span>
                               )}
@@ -184,7 +194,7 @@ export function AppSidebar() {
                             <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity">
                               <Button
                                 variant="ghost" size="icon"
-                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
+                                className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
                                 onClick={(e) => { e.stopPropagation(); setEditingSessionId(session.id); }}
                                 title="Rename"
                               >
@@ -195,7 +205,7 @@ export function AppSidebar() {
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost" size="icon"
-                                    className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
+                                    className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-primary"}`}
                                     onClick={(e) => e.stopPropagation()}
                                     title="Review reminder"
                                   >
@@ -219,7 +229,7 @@ export function AppSidebar() {
 
                               <Button
                                 variant="ghost" size="icon"
-                                className={`h-5 w-5 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
+                                className={`h-6 w-6 ${activeSessionId === session.id ? "text-primary-foreground/70 hover:text-white" : "text-muted-foreground hover:text-destructive"}`}
                                 onClick={(e) => { e.stopPropagation(); if (confirm("Delete session?")) deleteSession(session.id); }}
                               >
                                 <Trash2 className="h-3 w-3" />
