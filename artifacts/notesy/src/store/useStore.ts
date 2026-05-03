@@ -128,11 +128,18 @@ export const useStore = create<AppState>()(
           };
         }),
       })),
-      togglePinMessage: (messageId) => set((state) => ({
-        messages: state.messages.map((m) =>
-          m.id === messageId ? { ...m, pinned: !m.pinned } : m
-        ),
-      })),
+      togglePinMessage: (messageId) => set((state) => {
+        const target = state.messages.find((m) => m.id === messageId);
+        if (!target) return state;
+        const isPinning = !target.pinned;
+        const pinnedCount = state.messages.filter((m) => m.pinned).length;
+        if (isPinning && pinnedCount >= 5) return state;
+        return {
+          messages: state.messages.map((m) =>
+            m.id === messageId ? { ...m, pinned: !m.pinned } : m
+          ),
+        };
+      }),
 
       createSubject: (name) => {
         const newSubject: Subject = { id: uuidv4(), name, createdAt: Date.now() };

@@ -286,7 +286,13 @@ export function ChatArea() {
                 {/* Pin */}
                 <button
                   className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${msg.pinned ? "text-yellow-500 hover:text-yellow-600" : "text-muted-foreground hover:text-yellow-500 hover:bg-muted"}`}
-                  onClick={() => togglePinMessage(msg.id)}
+                  onClick={() => {
+                    if (!msg.pinned && pinnedMessages.length >= 5) {
+                      toast.error("Maximum 5 messages can be pinned");
+                      return;
+                    }
+                    togglePinMessage(msg.id);
+                  }}
                   title={msg.pinned ? "Unpin" : "Pin"}
                 >
                   {msg.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
