@@ -1,0 +1,58 @@
+Build ready to start ▶️
+>> Cloning github.com/aritra2023/NotesyV02.git commit sha 6fdff4841ec2b1a75dd0aba5e3ffa9a925ade3f9 into /builder/workspace
+Initialized empty Git repository in /builder/workspace/.git/
+From https://github.com/aritra2023/NotesyV02
+ * branch            6fdff4841ec2b1a75dd0aba5e3ffa9a925ade3f9 -> FETCH_HEAD
+HEAD is now at 6fdff48 Published your App
+Starting Docker daemon...
+Waiting for the Docker daemon to start...
+done
+Timer: Analyzer started at 2026-05-03T02:18:38Z
+Image with name "registry01.prod.koyeb.com/k-41fa610c-8a3d-46ab-85aa-c988cfed7183/66b9371f-e641-4b38-9a10-f014db2799fd" not found
+Timer: Analyzer ran for 291.402123ms and ended at 2026-05-03T02:18:38Z
+Timer: Detector started at 2026-05-03T02:18:39Z
+4 of 5 buildpacks participating
+koyeb/build-command-nodejs 0.1.0
+heroku/nodejs-engine       3.6.5
+heroku/nodejs-pnpm-engine  3.6.5
+heroku/nodejs-pnpm-install 3.6.5
+Timer: Detector ran for 91.05593ms and ended at 2026-05-03T02:18:39Z
+Timer: Restorer started at 2026-05-03T02:18:40Z
+Layer cache not found
+Timer: Restorer ran for 218.059997ms and ended at 2026-05-03T02:18:40Z
+Timer: Builder started at 2026-05-03T02:18:40Z
+[INFO] Found custom build command: 'pnpm install && pnpm --filter @workspace/notesy run build'
+
+[1;35m## Heroku Node.js Engine[0m
+
+- Checking Node.js version
+  - Node.js version not specified, using `[0;33m22.x[0m`
+  - Resolved Node.js version: `[0;33m22.15.1[0m`
+- Installing Node.js distribution
+  - Downloading Node.js `[0;33m22.15.1 (linux-amd64)[0m` from [1;4;36mhttps://nodejs.org/download/release/v22.15.1/node-v22.15.1-linux-x64.tar.gz[0m[2;1m .[0m[2;1m.[0m[2;1m. [0m(< 0.1s)
+  - Verifying checksum
+  - Extracting Node.js `[0;33m22.15.1 (linux-amd64)[0m`
+  - Installing Node.js `[0;33m22.15.1 (linux-amd64)[0m`[2;1m .[0m[2;1m.[0m[2;1m. [0m(< 0.1s)
+- Done (finished in 1.3s)
+
+[1;35m## Heroku Node.js pnpm Engine[0m
+
+
+
+[0;31m! Corepack Requirement Error[0m
+[0;31m![0m
+[0;31m! A pnpm lockfile (`[0;33mpnpm-lock.yaml[0m[0;31m`) was detected, but the version of `[0;33mpnpm[0m[0;31m` to install could not be determined.[0m
+[0;31m![0m
+[0;31m! `[0;33mpnpm[0m[0;31m` may be installed via the `[0;33m[1;36mheroku/nodejs-corepack[0m[0;31m` buildpack. It requires the desired `[0;33mpnpm[0m[0;31m` version to be set via the `[0;33mpackageManager[0m[0;31m` key in `[0;33mpackage.json[0m[0;31m`.[0m
+[0;31m![0m
+[0;31m! To set `[0;33mpackageManager[0m[0;31m` in `[0;33mpackage.json[0m[0;31m` to the latest `[0;33mpnpm[0m[0;31m`, run:[0m
+[0;31m![0m
+[0;31m! `[0;33m[1;36mcorepack enable[0m[0;31m`[0m
+[0;31m! `[0;33m[1;36mcorepack use pnpm@*[0m[0;31m`[0m
+[0;31m![0m
+[0;31m! Then commit the result, and try again.[0m
+
+
+Timer: Builder ran for 1.400328475s and ended at 2026-05-03T02:18:42Z
+[31;1mERROR: [0mfailed to build: exit status 1
+Build failed ❌
